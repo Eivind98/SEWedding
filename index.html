@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fo">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunnvá og Eivind Brúdleyp</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen font-serif antialiased bg-gradient-to-b from-rose-50 via-white to-amber-50 text-neutral-800">
+  <header id="home" class="py-20 text-center relative">
+    <div class="w-full max-w-xl mx-auto px-6">
+      <h1 class="text-5xl md:text-6xl font-serif tracking-tight mb-3">
+        Brúdleyp
+      </h1>
+      <p class="text-2xl md:text-3xl text-rose-800/80 font-light">
+        Sunnvá &amp; Eivind
+      </p>
+    </div>
+  </header>
+
+  <main class="relative max-w-3xl mx-auto px-6 pb-16 -mt-10">
+    <div class="relative bg-white/40 backdrop-blur-sm rounded-2xl shadow-sm ring-1 ring-black/5 px-6 sm:px-10 py-10 space-y-12">
+      
+      <section>
+        <h2 class="text-3xl font-serif mb-4 text-rose-900">Vælkomin</h2>
+        <p class="leading-relaxed">
+          Hendan heimasíðan hevur til formál at deila upplýsningar um brúðleypið hjá Sunnvá og Eivind. Heimasíðan verur hildin updatera um nakrir upplýsningar skuldu broytt seg.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-3xl font-serif mb-6 text-rose-900">Skrá</h2>
+
+        <div class="space-y-8">
+          <div>
+            <h3 class="font-semibold uppercase tracking-wide text-sm text-neutral-800 mb-2">14. August</h3>
+            <ul class="space-y-1 text-neutral-800">
+              <li>11:00 - Vælomin</li>
+              <li>12:00 - Matur</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold uppercase tracking-wide text-sm text-neutral-800 mb-2">15. August</h3>
+            <ul class="space-y-1 text-neutral-800">
+              <li>11:00 - Vígsla byrjar</li>
+              <li>12:00 - Hugni</li>
+              <li>14:00 - Reception</li>
+              <li>17:00 - Taka felags myndir</li>
+              <li>18:00 - Borðhald</li>
+              <li>00:00 - Nátt matur</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold uppercase tracking-wide text-sm text-neutral-800 mb-2">16. August</h3>
+            <ul class="space-y-1 text-neutral-800">
+              <li>11:00 - Tíð at vakna</li>
+              <li>12:00 - Pakka</li>
+              <li>14:00 - Tjek út</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-3xl font-serif mb-4 text-rose-900">Bestilla pláss</h2>
+        <p>
+          <a class="inline-flex items-center gap-1 text-rose-700 hover:text-rose-900 underline decoration-rose-300 hover:decoration-rose-600 transition"
+             href="https://ev.dk/" target="_blank" rel="noopener">
+            Bestill hotel kamar her
+            <span aria-hidden="true">↗</span>
+          </a>
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-3xl font-serif mb-4 text-rose-900">Her er Egholm Vestergaard</h2>
+        <div class="space-y-6">
+          <p class="text-neutral-800 leading-relaxed">
+            Adressa: <span class="font-semibold">Egholm 57, 9000 Aalborg Danmark</span><br>
+            GPS: <code class="bg-neutral-100 px-1 py-0.5 rounded text-sm">57.065812, 9.835938</code>
+          </p>
+
+          <div class="aspect-video w-full border border-neutral-300/70 rounded-lg overflow-hidden shadow-sm">
+            <iframe
+              title="Kort - Egholm Vestergaard"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=9.8315%2C57.0640%2C9.8404%2C57.0676&layer=mapnik&marker=57.065812%2C9.835938"
+              class="w-full h-full"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+          </div>
+
+          <div class="flex flex-wrap gap-4 text-sm">
+            <a class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900" target="_blank" rel="noopener" href="https://maps.app.goo.gl/893BN8Q2Lr2gKX567">
+              Google Maps ↗
+            </a>
+            <a class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900" target="_blank" rel="noopener" href="https://maps.apple.com/?ll=57.065812,9.835938&q=Egholm%20Vestergaard">
+              Apple Maps ↗
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="text-center py-10 text-sm text-neutral-700">
+    &copy; <span id="year"></span> Sunnvá og Eivind
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
