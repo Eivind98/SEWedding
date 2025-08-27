@@ -5,6 +5,7 @@ FROM nginx:1.27-alpine
 COPY index.html /usr/share/nginx/html/index.html
 COPY style.css /usr/share/nginx/html/style.css
 COPY script.js /usr/share/nginx/html/script.js
+COPY assets/ /usr/share/nginx/html/assets/
 
 # Provide a basic health check (optional)
 HEALTHCHECK CMD wget -q -O /dev/null http://localhost:80 || exit 1
