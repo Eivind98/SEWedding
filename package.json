@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "description": "Simple static wedding info site",
   "scripts": {
-    "dev": "live-server --port=3000 --open=index.html --watch=index.html,style.css,script.js",
+    "dev": "start /B npm run watch:css && npm run serve",
+    "serve": "live-server --port=3000 --open=index.html --watch=index.html,style.css,script.js,custom.css",
     "preview": "docker build -t wedding-site . && docker run --rm -p 8080:8080 wedding-site",
     "build:css": "tailwindcss -i ./src/tailwind.css -o ./style.css --minify",
     "watch:css": "tailwindcss -i ./src/tailwind.css -o ./style.css --watch"

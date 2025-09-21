@@ -1,0 +1,19 @@
+
+/* Ensure full-height and remove default margins */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+/* Fixed full-viewport background */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: url("assets/backgroundImage.png") left bottom / cover no-repeat;
+}
+
+body {
+  position: relative;
+}
