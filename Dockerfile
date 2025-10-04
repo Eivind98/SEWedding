@@ -4,6 +4,7 @@ FROM nginx:1.27-alpine
 # Copy site content
 COPY index.html /usr/share/nginx/html/index.html
 COPY style.css /usr/share/nginx/html/style.css
+COPY custom.css /usr/share/nginx/html/custom.css
 COPY script.js /usr/share/nginx/html/script.js
 COPY assets/ /usr/share/nginx/html/assets/
 
