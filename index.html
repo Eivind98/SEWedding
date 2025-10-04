@@ -11,6 +11,33 @@
   <body
     class="min-h-screen font-serif antialiased bg-gradient-to-b from-rose-50 via-white to-amber-50 text-neutral-800"
   >
+    <nav class="site-nav" aria-label="Høvuðs valmynd">
+      <button
+        type="button"
+        class="site-nav__toggle"
+        aria-expanded="false"
+        aria-controls="site-nav-panel"
+      >
+        <span class="sr-only">Vís ella goym valmynd</span>
+        <span class="site-nav__icon" aria-hidden="true"></span>
+      </button>
+
+      <div class="site-nav__panel" id="site-nav-panel">
+        <ul class="site-nav__list">
+          <li><a href="#home">Heim</a></li>
+          <li><a href="#vaelkomin">Vælkomin</a></li>
+          <li><a href="#skra">Skrá</a></li>
+          <li><a href="#toastmaster">Toastmaster</a></li>
+          <li><a href="#bestilla">Bestilla pláss</a></li>
+          <li><a href="#kort">Kort</a></li>
+          <li><a href="#dresscode">Dresscode</a></li>
+          <li><a href="#ynski">Gávuynski</a></li>
+          <li><a href="#kontakt">Kontakt</a></li>
+          <li><a href="#myndir">Deila Myndir</a></li>
+        </ul>
+      </div>
+    </nav>
+
     <header id="home" class="py-20 text-center relative">
       <div class="w-full max-w-xl mx-auto px-6">
         <h1 class="text-5xl md:text-6xl font-serif tracking-tight mb-3">
@@ -22,11 +49,11 @@
       </div>
     </header>
 
-    <main class="relative max-w-3xl mx-auto px-6 pb-16 -mt-10">
+    <main class="relative max-w-3xl mx-auto px-6 pb-96 -mt-10">
       <div
         class="relative bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm ring-1 ring-black/5 px-6 sm:px-10 py-10 space-y-12"
       >
-        <section>
+        <section id="vaelkomin">
           <h2 class="text-3xl font-serif mb-4 text-rose-900">Vælkomin</h2>
           <p class="leading-relaxed">
             Hendan heimasíðan skal geva tykkum innlit og kunning um tann stóra
@@ -36,7 +63,7 @@
           </p>
         </section>
 
-        <section>
+        <section id="skra">
           <h2 class="text-3xl font-serif mb-6 text-rose-900">Skrá</h2>
 
           <div class="space-y-8">
@@ -84,7 +111,7 @@
           </div>
         </section>
 
-        <section>
+        <section id="toastmaster">
           <h2 class="text-3xl font-serif mb-4 text-rose-900">Toastmaster</h2>
           <p>
             Øll innsløg eru hjartaliga vælkomin, so um tit ynskja at halda eina
@@ -92,7 +119,6 @@
             toastmaster, Rúna.
           </p>
           <p>Navn: Rúni Egholm Vørmadal</p>
-          <p>Tlf: 12345678</p>
           <p>E-mail: runi@example.com</p>
           <p class="mt-4">
             Um tit, upp til ella á degnum, hava spurningar til ella skulu brúka
@@ -101,7 +127,7 @@
           </p>
         </section>
 
-        <section>
+        <section id="bestilla">
           <h2 class="text-3xl font-serif mb-4 text-rose-900">Bestilla pláss</h2>
           <p>
             Tað eru 18 dupult kømur men tað kann reiðast upp til 4 fólk
@@ -115,13 +141,12 @@
               target="_blank"
               rel="noopener"
             >
-              Bestill hotel kamar her
-              <span aria-hidden="true">↗</span>
+              Bestill hotel kamar her ↗
             </a>
           </p>
         </section>
 
-        <section>
+        <section id="kort">
           <h2 class="text-3xl font-serif mb-4 text-rose-900">
             Her er Egholm Vestergaard
           </h2>
@@ -170,13 +195,9 @@
           </div>
         </section>
 
-        <section>
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">
-            Dresscode
-          </h2>
-          <p>
-            Formelt romatiskt og ævintýrligt. Ikki hvítt
-          </p>
+        <section id="dresscode">
+          <h2 class="text-3xl font-serif mb-4 text-rose-900">Dresscode</h2>
+          <p>Formelt, romatiskt og ævintýrligt. Ikki hvítt</p>
           <p>
             <a
               class="inline-flex items-center gap-1 text-rose-700 hover:text-rose-900 underline decoration-rose-300 hover:decoration-rose-600 transition"
@@ -184,61 +205,60 @@
               target="_blank"
               rel="noopener"
             >
-              Pinterest Board
-              <span aria-hidden="true">↗</span>
+              Pinterest Board ↗
             </a>
           </p>
           <div class="flex flex-wrap justify-center gap-4 mt-6">
             <img
-            src="https://i.pinimg.com/1200x/92/db/b3/92dbb3adda2366fd95cc2f460f7878b2.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
-          <img
-            src="https://i.pinimg.com/1200x/30/27/8d/30278d88efa488b716066a3b08921f45.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
-          <img
-            src="https://i.pinimg.com/736x/9b/c9/90/9bc99081eeb5724e9a89529add6702a7.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
-          <img
-            src="https://i.pinimg.com/736x/55/94/32/559432ade92d905bf0e07112beb5047b.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
+              src="https://i.pinimg.com/1200x/92/db/b3/92dbb3adda2366fd95cc2f460f7878b2.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
+            <img
+              src="https://i.pinimg.com/1200x/30/27/8d/30278d88efa488b716066a3b08921f45.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
+            <img
+              src="https://i.pinimg.com/736x/9b/c9/90/9bc99081eeb5724e9a89529add6702a7.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
+            <img
+              src="https://i.pinimg.com/736x/55/94/32/559432ade92d905bf0e07112beb5047b.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
 
-          <img
-            src="https://i.pinimg.com/1200x/a7/78/07/a7780797b831dec7feb29d6efc2848d9.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
-          <img
-            src="https://i.pinimg.com/1200x/e5/ca/8e/e5ca8e9bddea3edde0569bea56fbac2b.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
-          <img
-            src="assets/WeirdPicture.png"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
-          <img
-            src="https://i.pinimg.com/1200x/ed/2c/e7/ed2ce7cb1def7f7e540ecaefca0c6860.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
-          <img
-            src="https://i.pinimg.com/736x/ca/9f/ff/ca9ffff552232055a8341e987f8937bf.jpg"
-            alt="Dresscode Example"
-            class="h-48 object-contain rounded-lg shadow-sm"
-          />
+            <img
+              src="https://i.pinimg.com/1200x/a7/78/07/a7780797b831dec7feb29d6efc2848d9.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
+            <img
+              src="https://i.pinimg.com/1200x/e5/ca/8e/e5ca8e9bddea3edde0569bea56fbac2b.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
+            <img
+              src="assets/WeirdPicture.png"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
+            <img
+              src="https://i.pinimg.com/1200x/ed/2c/e7/ed2ce7cb1def7f7e540ecaefca0c6860.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
+            <img
+              src="https://i.pinimg.com/736x/ca/9f/ff/ca9ffff552232055a8341e987f8937bf.jpg"
+              alt="Dresscode Example"
+              class="h-48 object-contain rounded-lg shadow-sm"
+            />
           </div>
         </section>
 
-        <section>
+        <section id="ynski">
           <h2 class="text-3xl font-serif mb-4 text-rose-900">
             Hvat ynskja vit okkum
           </h2>
@@ -248,16 +268,28 @@
           </p>
         </section>
 
-        <section>
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">
-            Kontakt
-          </h2>
-          <p style="white-space: pre-line">Eivind:
-            Telefon nr.: +45 61480303
+        <section id="kontakt">
+          <h2 class="text-3xl font-serif mb-4 text-rose-900">Kontakt</h2>
+          <p style="white-space: pre-line">
+            <b>Eivind</b>
+            Telefon nr.: +45 61480303 
             E-mail: eev_98@hotmail.com
           </p>
-          <p class="mt-4">
-            Annars altíð vælkomin at skriva á messenger.
+          <p class="mt-4">Annars altíð vælkomin at skriva á messenger.</p>
+        </section>
+
+        <section id="myndir">
+          <h2 class="text-3xl font-serif mb-4 text-rose-900">Deila Myndir</h2>
+          <p>
+              Um tit vilja deila myndir ella video sum tit hava tikið á brúdleypinum kunnu tit uploada tær á okkara 
+            <a
+              class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900"
+              target="_blank"
+              rel="noopener"
+              href="https://1drv.ms/f/c/e4541db236f3dcf3/Eqy27SRA_ItHshUnznocos8BxrO6KtHgYmvh7PlH_4XVMw?e=exgjuJ"
+            >
+              OneDrive. ↗
+            </a>
           </p>
         </section>
       </div>

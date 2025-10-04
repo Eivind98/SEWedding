@@ -554,6 +554,18 @@ video {
   display: none;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 .relative {
   position: relative;
 }
@@ -603,12 +615,12 @@ video {
   aspect-ratio: 16 / 9;
 }
 
-.h-full {
-  height: 100%;
-}
-
 .h-48 {
   height: 12rem;
+}
+
+.h-full {
+  height: 100%;
 }
 
 .min-h-screen {
@@ -619,24 +631,12 @@ video {
   width: 100%;
 }
 
-.w-20 {
-  width: 5rem;
-}
-
-.w-40 {
-  width: 10rem;
-}
-
 .max-w-3xl {
   max-width: 48rem;
 }
 
 .max-w-xl {
   max-width: 36rem;
-}
-
-.max-w-md {
-  max-width: 28rem;
 }
 
 .flex-wrap {
@@ -716,18 +716,6 @@ video {
   background-color: rgb(255 255 255 / 0.5);
 }
 
-.bg-white\/60 {
-  background-color: rgb(255 255 255 / 0.6);
-}
-
-.bg-white\/80 {
-  background-color: rgb(255 255 255 / 0.8);
-}
-
-.bg-white\/40 {
-  background-color: rgb(255 255 255 / 0.4);
-}
-
 .bg-gradient-to-b {
   background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
 }
@@ -750,11 +738,6 @@ video {
 .object-contain {
   -o-object-fit: contain;
      object-fit: contain;
-}
-
-.object-cover {
-  -o-object-fit: cover;
-     object-fit: cover;
 }
 
 .px-1 {
@@ -784,6 +767,18 @@ video {
 
 .pb-16 {
   padding-bottom: 4rem;
+}
+
+.pb-32 {
+  padding-bottom: 8rem;
+}
+
+.pb-40 {
+  padding-bottom: 10rem;
+}
+
+.pb-96 {
+  padding-bottom: 24rem;
 }
 
 .text-center {
