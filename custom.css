@@ -9,6 +9,69 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Language Toggle Button Styles */
+.language-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-toggle:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.language-toggle .flag-fo,
+.language-toggle .flag-da {
+  width: 24px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  filter: grayscale(0.6) brightness(0.8);
+}
+
+.language-toggle.active-fo .flag-fo {
+  opacity: 1;
+  filter: grayscale(0) brightness(1);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.3);
+}
+
+.language-toggle.active-da .flag-da {
+  opacity: 1;
+  filter: grayscale(0) brightness(1);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .language-toggle {
+    top: 15px;
+    right: 15px;
+    padding: 6px;
+  }
+  
+  .language-toggle .flag-fo,
+  .language-toggle .flag-da {
+    width: 20px;
+    height: 13px;
+  }
+}
+
 /* Fixed full-viewport background */
 body::before {
   content: "";

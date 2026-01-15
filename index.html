@@ -12,28 +12,32 @@
     class="min-h-screen font-serif antialiased bg-gradient-to-b from-rose-50 via-white to-amber-50 text-neutral-800"
   >
     <nav class="site-nav" aria-label="Høvuðs valmynd">
+      <button id="language-toggle" class="language-toggle" aria-label="Switch language">
+        <img src="assets/FO.webp" alt="Faroese" class="flag-fo" />
+        <img src="assets/DK.webp" alt="Danish" class="flag-da" />
+      </button>
       <button
         type="button"
         class="site-nav__toggle"
         aria-expanded="false"
         aria-controls="site-nav-panel"
       >
-        <span class="sr-only">Vís ella goym valmynd</span>
+        <span class="sr-only" data-fo="Vís ella goym valmynd" data-da="Vis eller skjul menu"></span>
         <span class="site-nav__icon" aria-hidden="true"></span>
       </button>
 
       <div class="site-nav__panel" id="site-nav-panel">
         <ul class="site-nav__list">
-          <li><a href="#home">Heim</a></li>
-          <li><a href="#vaelkomin">Vælkomin</a></li>
-          <li><a href="#skra">Skrá</a></li>
-          <li><a href="#toastmaster">Toastmaster</a></li>
-          <li><a href="#børn">Børn</a></li>
-          <li><a href="#bestilla">Bestilla pláss</a></li>
-          <li><a href="#kort">Kort</a></li>
-          <li><a href="#dresscode">Dresscode</a></li>
-          <li><a href="#ynski">Gávuynski</a></li>
-          <li><a href="#kontakt">Kontakt</a></li>
+          <li><a href="#home" data-fo="Heim" data-da="Hjem"></a></li>
+          <li><a href="#vaelkomin" data-fo="Vælkomin" data-da="Velkommen"></a></li>
+          <li><a href="#skra" data-fo="Skrá" data-da="Program"></a></li>
+          <li><a href="#toastmaster" data-fo="Toastmaster" data-da="Toastmaster"></a></li>
+          <li><a href="#børn" data-fo="Børn" data-da="Børn"></a></li>
+          <li><a href="#bestilla" data-fo="Bestilla pláss" data-da="Overnatning"></a></li>
+          <li><a href="#kort" data-fo="Kort" data-da="Kort"></a></li>
+          <li><a href="#dresscode" data-fo="Dresscode" data-da="Dresscode"></a></li>
+          <li><a href="#ynski" data-fo="Gávuynski" data-da="Gaveønsker"></a></li>
+          <li><a href="#kontakt" data-fo="Kontakt" data-da="Kontakt"></a></li>
           <!-- <li><a href="#myndir">Deila Myndir</a></li> -->
         </ul>
       </div>
@@ -55,17 +59,13 @@
         class="relative bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm ring-1 ring-black/5 px-6 sm:px-10 py-10 space-y-12"
       >
         <section id="vaelkomin">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">Vælkomin</h2>
-          <p class="leading-relaxed">
-            Hendan heimasíðan skal geva tykkum innlit og kunning um tann stóra
-            dagin. Vónandi finna tit svar uppá allar spurningar her, um ikki
-            sendi okkum eini boð ella ring. Vit gleða okkum til at skapa minnir
-            saman við tykkum.
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Vælkomin" data-da="Velkommen"></h2>
+          <p class="leading-relaxed" data-fo="Hendan heimasíðan skal geva tykkum innlit og kunning um tann stóra dagin. Vónandi finna tit svar uppá allar spurningar her, um ikki sendi okkum eini boð ella ring. Vit gleða okkum til at skapa minnir saman við tykkum." data-da="Denne hjemmeside skal give jer indblik i og information om den store dag. Forhåbentlig finder I svar på alle jeres spørgsmål her, ellers er I velkomne til at sende os en besked eller ringe. Vi glæder os til at skabe minder sammen med jer.">
           </p>
         </section>
 
         <section id="skra">
-          <h2 class="text-3xl font-serif mb-6 text-rose-900">Skrá</h2>
+          <h2 class="text-3xl font-serif mb-6 text-rose-900" data-fo="Skrá" data-da="Program"></h2>
 
           <div class="space-y-8">
             <div>
@@ -75,9 +75,9 @@
                 14. August
               </h3>
               <ul class="space-y-1 text-neutral-800">
-                <li>17:00 - Check in</li>
-                <li>19:00 - Matur</li>
-                <li>20:00 - Hugni</li>
+                <li data-fo="17:00 - Check in" data-da="17:00 - Check in"></li>
+                <li data-fo="18:00 - Matur (Tapas buffet)" data-da="18:00 - Mad (Tapas buffet)"></li>
+                <li data-fo="20:00 - Hugni" data-da="20:00 - Hygge"></li>
               </ul>
             </div>
             <div>
@@ -87,15 +87,16 @@
                 15. August
               </h3>
               <ul class="space-y-1 text-neutral-800">
-                <li>11:00 - Vígsla byrjar</li>
-                <li>12:00 - Reception</li>
-                <li>15:00 - Brúdleypskakan verður skorin</li>
-                <li>17:00 - Taka felags myndir</li>
-                <li>17:30 - Vælkomst drykkir</li>
-                <li>18:00 - Borðhald</li>
-                <li>23:00 - Gera klárt til dans</li>
-                <li>00:00 - Fergan siglur síðsta túr</li>
-                <li>01:00 - Nátt Matur</li>
+                <li data-fo="08:30-10:00 - Morgunmatur" data-da="08:30-10:00 - Morgenmad"></li>
+                <li data-fo="11:00 - Vígsla byrjar" data-da="11:00 - Vielsen begynder"></li>
+                <li data-fo="12:00 - Reception" data-da="12:00 - Reception"></li>
+                <li data-fo="15:00 - Brúdleypskakan verður skorin" data-da="15:00 - Bryllupskagen skæres"></li>
+                <li data-fo="17:00 - Taka felags myndir" data-da="17:00 - Fælles billeder"></li>
+                <li data-fo="17:30 - Vælkomst drykkir" data-da="17:30 - Velkomstdrinks"></li>
+                <li data-fo="18:00 - Borðhald" data-da="18:00 - Middag"></li>
+                <li data-fo="23:00 - Gera klárt til dans" data-da="23:00 - Klargøring til dans"></li>
+                <li data-fo="00:00 - Fergan siglur síðsta túr" data-da="00:00 - Færgen sejler sidste tur"></li>
+                <li data-fo="01:00 - Nátt Matur" data-da="01:00 - Natmad"></li>
               </ul>
             </div>
             <div>
@@ -105,47 +106,34 @@
                 16. August
               </h3>
               <ul class="space-y-1 text-neutral-800">
-                <li>09:00-10:00 - Morgunmatur</li>
-                <li>14:00 - Tjek út (skal kannast)</li>
+                <li data-fo="08:30-10:00 - Morgunmatur" data-da="08:30-10:00 - Morgenmad"></li>
+                <li data-fo="11:00 - Tjek út" data-da="11:00 - Check ud"></li>
               </ul>
             </div>
           </div>
         </section>
 
         <section id="toastmaster">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">Toastmaster</h2>
-          <p>
-            Øll innsløg eru hjartaliga vælkomin, so um tit ynskja at halda eina
-            talu ella onnur innsløg, kunnu tit seta tykkum í samband við okkara
-            toastmaster, Rúna.
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Toastmaster" data-da="Toastmaster"></h2>
+          <p data-fo="Øll innsløg eru hjartaliga vælkomin, so um tit ynskja at halda eina talu ella onnur innsløg, kunnu tit seta tykkum í samband við okkara toastmaster, Rúna." data-da="Alle indslag er hjerteligt velkomne. Hvis I ønsker at holde en tale eller bidrage med andet, er I velkomne til at kontakte vores toastmaster, Rúni.">
           </p>
-          <p>Navn: Rúni Egholm Vørmadal</p>
+          <p data-fo="Navn: Rúni Egholm Vørmadal" data-da="Navn: Rúni Egholm Vørmadal"></p>
           <p>E-mail: toastmaster@vormadal.com</p>
-          <p class="mt-4">
-            Um tit, upp til ella á degnum, hava spurningar til ella skulu brúka
-            tekniska hjálp (Ljóð, ljós, video), er tað eisini Rúna, tit skulu
-            hava fatur á.
+          <p class="mt-4" data-fo="Um tit, upp til ella á degnum, hava spurningar til ella skulu brúka tekniska hjálp (Ljóð, ljós, video), er tað eisini Rúna, tit skulu hava fatur á." data-da="Har I spørgsmål op til eller på dagen, eller har brug for teknisk hjælp (lyd, lys, video), er det også Rúni, I skal kontakte.">
           </p>
         </section>
 
         <section id="børn">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">Børn</h2>
-          <p>
-            Børn eru hjartaliga vælkomin fríggjadagin og til vígslu og móttøku leygardagin, minst tó til at boða frá hesum.
-            Vit bæði elska øll tykkara børn, men tað verður neyvan stuttligt hjá teimum ella foreldrum, um tey skulu sita still á einum stóli restina av degnum, og tí hava vit tikið hesa avgerð.
-            Um serligar umstøður gera seg galdandi, kunnu tit seta tykkum í samband við okkum, tí undantøk eru ikki ómøgulig.
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Børn" data-da="Børn"></h2>
+          <p data-fo="Børn eru hjartaliga vælkomin fríggjadagin og til vígslu og móttøku leygardagin, minst tó til at boða frá hesum. Vit bæði elska øll tykkara børn, men tað verður neyvan stuttligt hjá teimum ella foreldrum, um tey skulu sita still á einum stóli restina av degnum, og tí hava vit tikið hesa avgerð. Um serligar umstøður gera seg galdandi, kunnu tit seta tykkum í samband við okkum, tí undantøk eru ikki ómøgulig." data-da="Børn er hjerteligt velkomne om fredagen samt til vielsen og receptionen om lørdagen, men vi beder jer om at give besked. Vi elsker alle jeres børn, men det kan blive svært for både børn og forældre, hvis de skal sidde stille på en stol resten af dagen. Derfor har vi truffet denne beslutning. Hvis der er særlige omstændigheder, er I velkomne til at kontakte os. Undtagelser kan lade sig gøre.">
           </p>
         </section>
 
         <section id="bestilla">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">Bestilla pláss</h2>
-          <p>
-            Tað eru 18 dupult kømur men tað kann reiðast upp til 4 fólk
-            tilsamans í hvørt kamar, vit mæla til at tit bólka tykkum saman til
-            4 í hvørt kamar fyri at tað skal vera betur pláss.
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Bestilla pláss" data-da="Overnatning"></h2>
+          <p data-fo="Tað eru 18 dupult kømur men tað kann reiðast upp til 4 fólk tilsamans í hvørt kamar, vit mæla til at tit bólka tykkum saman til 4 í hvørt kamar fyri at tað skal vera betur pláss." data-da="Der er 18 dobbeltværelser, hvor der kan bo op til 4 personer på hvert værelse. Vi anbefaler, at I går sammen i grupper på 4 så vidt muligt, så der bliver bedre plads til alle.">
           </p>
-          <p>
-            Leinkja til bestilling kemur seinni.
+          <p data-fo="Leinkja til bestilling kemur seinni." data-da="Link til reservation kommer senere.">
             <!-- <a
               class="inline-flex items-center gap-1 text-rose-700 hover:text-rose-900 underline decoration-rose-300 hover:decoration-rose-600 transition"
               href="https://ev.dk/"
@@ -158,12 +146,10 @@
         </section>
 
         <section id="kort">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">
-            Her er Egholm Vestergaard
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Her er Egholm Vestergaard" data-da="Her er Egholm Vestergaard">
           </h2>
           <div class="space-y-6">
-            <p class="text-neutral-800 leading-relaxed">
-              Adressa:
+            <p class="text-neutral-800 leading-relaxed" data-fo="Adressa: Egholm 57, 9000 Aalborg Danmark" data-da="Adresse: Egholm 57, 9000 Aalborg Danmark">
               <span class="font-semibold">Egholm 57, 9000 Aalborg Danmark</span
               ><br />
               GPS:
@@ -207,16 +193,17 @@
         </section>
 
         <section id="dresscode">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">Dresscode</h2>
-          <p>Formelt, romatiskt og ævintýrligt. Ikki hvítt</p>
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Dresscode" data-da="Dresscode"></h2>
+          <p data-fo="Formelt, romatiskt og ævintýrligt. Ikki hvítt" data-da="Formelt, romantisk og eventyrligt. Ikke hvidt"></p>
           <p>
             <a
               class="inline-flex items-center gap-1 text-rose-700 hover:text-rose-900 underline decoration-rose-300 hover:decoration-rose-600 transition"
               href="https://dk.pinterest.com/midjordmikkelse/wedding-guest-inspo/?invite_code=4f7b7c98087c44e0bada0e4ab3334442&sender=366269519603314526"
               target="_blank"
               rel="noopener"
+              data-fo="Pinterest Board ↗" 
+              data-da="Pinterest Board ↗"
             >
-              Pinterest Board ↗
             </a>
           </p>
           <div class="flex flex-wrap justify-center gap-4 mt-6">
@@ -265,22 +252,19 @@
         </section>
 
         <section id="ynski">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">
-            Hvat ynskja vit okkum
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Hvat ynskja vit okkum" data-da="Gaveønsker">
           </h2>
-          <p>
-            Allar gávur eru vælkomnar, men vit ynskja okkum bara at tit koma til
-            brúdleypið.
+          <p data-fo="Allar gávur eru vælkomnar, men vit ynskja okkum bara at tit koma til brúdleypið." data-da="Alle gaver er velkomne, men det vigtigste for os er, at I kommer til brylluppet.">
           </p>
         </section>
 
         <section id="kontakt">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">Kontakt</h2>
+          <h2 class="text-3xl font-serif mb-4 text-rose-900" data-fo="Kontakt" data-da="Kontakt"></h2>
           <p style="white-space: pre-line"><b>Eivind</b>
-            Telefon nr.: +45 61480303 
+            <span data-fo="Telefon nr.: +45 61480303" data-da="Telefonnr.: +45 61480303">Telefon nr.: +45 61480303</span> 
             E-mail: eev_98@hotmail.com
           </p>
-          <p class="mt-4">Annars altíð vælkomin at skriva á messenger.</p>
+          <p class="mt-4" data-fo="Annars altíð vælkomin at skriva á messenger." data-da="Ellers altid velkommen til at skrive på messenger."></p>
         </section>
 
         <!-- <section id="myndir">
@@ -301,7 +285,7 @@
     </main>
 
     <footer class="text-center py-10 text-sm text-neutral-700">
-      &copy; <span id="year"></span> Sunnvá og Eivind
+      &copy; <span id="year"></span> <span data-fo="Sunnvá og Eivind" data-da="Sunnvá og Eivind">Sunnvá og Eivind</span>
     </footer>
 
     <script src="script.js" defer></script>
