@@ -128,9 +128,10 @@
               </h3>
               <ul class="space-y-1 text-neutral-800">
                 <li
-                  data-fo="08:30-10:00 - Morgunmatur"
-                  data-da="08:30-10:00 - Morgenmad"
+                  data-fo="08:30-09:30 - Morgunmatur"
+                  data-da="08:30-09:30 - Morgenmad"
                 ></li>
+                <li data-fo="10:00 - Check in" data-da="10:00 - Check in"></li>
                 <li
                   data-fo="11:00 - Vígsla byrjar"
                   data-da="11:00 - Vielsen begynder"
@@ -171,8 +172,8 @@
               </h3>
               <ul class="space-y-1 text-neutral-800">
                 <li
-                  data-fo="08:30-10:00 - Morgunmatur"
-                  data-da="08:30-10:00 - Morgenmad"
+                  data-fo="09:00-10:00 - Morgunmatur"
+                  data-da="09:00-10:00 - Morgenmad"
                 ></li>
                 <li data-fo="11:00 - Tjek út" data-da="11:00 - Check ud"></li>
               </ul>
@@ -202,7 +203,7 @@
           ></p>
         </section>
 
-        <section id="børn">
+        <!-- <section id="børn">
           <h2
             class="text-3xl font-serif mb-4 text-rose-900"
             data-fo="Børn"
@@ -237,20 +238,16 @@
             data-da="Bestil hotelværelse her ↗"
           >
           </a>
-        </section>
+        </section> -->
 
-        <section id="kort">
+        <section id="kortVestergaard">
           <h2
             class="text-3xl font-serif mb-4 text-rose-900"
             data-fo="Her er Egholm Vestergaard"
             data-da="Her er Egholm Vestergaard"
           ></h2>
           <div class="space-y-6">
-            <p
-              class="text-neutral-800 leading-relaxed"
-              data-fo="Adressa: Egholm 57, 9000 Aalborg Danmark"
-              data-da="Adresse: Egholm 57, 9000 Aalborg Danmark"
-            >
+            <p>
               <span class="font-semibold">Egholm 57, 9000 Aalborg Danmark</span
               ><br />
               GPS:
@@ -286,6 +283,55 @@
                 target="_blank"
                 rel="noopener"
                 href="https://maps.apple.com/?ll=57.065812,9.835938&q=Egholm%20Vestergaard"
+              >
+                Apple Maps ↗
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section id="kortTrold">
+          <h2
+            class="text-3xl font-serif mb-4 text-rose-900"
+            data-fo="Her er vígslan"
+            data-da="Her er vigelsen"
+          ></h2>
+
+          <div class="space-y-6">
+            <p>
+              GPS:
+              <code class="bg-neutral-100 px-1 py-0.5 rounded text-sm">
+                57.0685615, 9.8337351
+              </code>
+            </p>
+
+            <div
+              class="aspect-video w-full border border-neutral-300/70 rounded-lg overflow-hidden shadow-sm"
+            >
+              <iframe
+                title="Kort - Egholm Trolden"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=9.8298%2C57.0673%2C9.8375%2C57.0698&layer=mapnik&marker=57.0685615%2C9.8337351"
+                class="w-full h-full"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+              ></iframe>
+            </div>
+
+            <div class="flex flex-wrap gap-4 text-sm">
+              <a
+                class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900"
+                target="_blank"
+                rel="noopener"
+                href="https://maps.google.com/?q=Egholm+Trolden&ll=57.0685615,9.8337351"
+              >
+                Google Maps ↗
+              </a>
+
+              <a
+                class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900"
+                target="_blank"
+                rel="noopener"
+                href="https://maps.apple.com/?ll=57.0685615,9.8337351&q=Egholm%20Trolden"
               >
                 Apple Maps ↗
               </a>
