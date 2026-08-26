@@ -3,3 +3,7 @@ README.md
 .git
 .gitignore
 *.log
+node_modules
+get-refresh-token.js
+check-onedrive.js
+.env

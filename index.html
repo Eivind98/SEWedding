@@ -37,6 +37,7 @@
       <div class="site-nav__panel" id="site-nav-panel">
         <ul class="site-nav__list">
           <li><a href="#home" data-fo="Heim" data-da="Hjem"></a></li>
+          <!--
           <li>
             <a href="#vaelkomin" data-fo="Vælkomin" data-da="Velkommen"></a>
           </li>
@@ -64,7 +65,10 @@
             <a href="#ynski" data-fo="Gávuynski" data-da="Gaveønsker"></a>
           </li>
           <li><a href="#kontakt" data-fo="Kontakt" data-da="Kontakt"></a></li>
-          <!-- <li><a href="#myndir">Deila Myndir</a></li> -->
+          -->
+          <li>
+            <a href="#myndir" data-fo="Deila myndir" data-da="Del billeder"></a>
+          </li>
         </ul>
       </div>
     </nav>
@@ -84,6 +88,7 @@
       <div
         class="relative bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm ring-1 ring-black/5 px-6 sm:px-10 py-10 space-y-12"
       >
+        <!--
         <section id="vaelkomin">
           <h2
             class="text-3xl font-serif mb-4 text-rose-900"
@@ -202,6 +207,7 @@
             data-da="Har I spørgsmål op til eller på dagen, eller har brug for teknisk hjælp (lyd, lys, video), er det også Rúni, I skal kontakte."
           ></p>
         </section>
+        -->
 
         <!-- <section id="børn">
           <h2
@@ -240,6 +246,7 @@
           </a>
         </section> -->
 
+        <!--
         <section id="kortVestergaard">
           <h2
             class="text-3xl font-serif mb-4 text-rose-900"
@@ -438,21 +445,50 @@
             data-da="Ellers altid velkommen til at skrive på messenger."
           ></p>
         </section>
+        -->
 
-        <!-- <section id="myndir">
-          <h2 class="text-3xl font-serif mb-4 text-rose-900">Deila Myndir</h2>
-          <p>
-              Um tit vilja deila myndir ella video sum tit hava tikið á brúdleypinum kunnu tit uploada tær á okkara 
-            <a
-              class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900"
-              target="_blank"
-              rel="noopener"
-              href="https://1drv.ms/f/c/e4541db236f3dcf3/Eqy27SRA_ItHshUnznocos8BxrO6KtHgYmvh7PlH_4XVMw?e=exgjuJ"
-            >
-              OneDrive. ↗
-            </a>
-          </p>
-        </section> -->
+        <section id="myndir">
+          <h2
+            class="text-3xl font-serif mb-4 text-rose-900"
+            data-fo="Deila myndir"
+            data-da="Del billeder"
+          ></h2>
+          <p
+            class="leading-relaxed mb-6"
+            data-fo="Hava tit tikið myndir ella video á brúdleypinum? Legg tey upp her, so savnast tey hjá okkum. Tit skulu hvørki hava konto ella logga inn."
+            data-da="Har I taget billeder eller video til brylluppet? Læg dem op her, så samles de hos os. I skal hverken have en konto eller logge ind."
+          ></p>
+
+          <div id="upload-drop" class="upload-drop">
+            <input
+              id="upload-input"
+              class="sr-only"
+              type="file"
+              multiple
+              accept="image/*,video/*"
+            />
+            <p
+              class="upload-drop__hint"
+              data-fo="Drag myndir ella video higar"
+              data-da="Træk billeder eller video herind"
+            ></p>
+            <button
+              type="button"
+              id="upload-pick"
+              class="upload-button"
+              data-fo="Vel myndir ella video"
+              data-da="Vælg billeder eller video"
+            ></button>
+          </div>
+
+          <ul id="upload-list" class="upload-list"></ul>
+
+          <p
+            class="upload-note"
+            data-fo="Halt hesa síðuna opna, til alt er liðugt."
+            data-da="Hold denne side åben, indtil alt er færdigt."
+          ></p>
+        </section>
       </div>
     </main>
 

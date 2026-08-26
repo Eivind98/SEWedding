@@ -1,0 +1,5 @@
+# Local OneDrive relay credentials - never commit these
+.env
+.refresh_token
+
+*.log

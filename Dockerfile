@@ -1,14 +1,18 @@
-# Simple static site served by Nginx
-FROM nginx:1.27-alpine
+# Static site + OneDrive upload relay
+FROM node:20-alpine
 
-# Copy site content
-COPY index.html /usr/share/nginx/html/index.html
-COPY style.css /usr/share/nginx/html/style.css
-COPY custom.css /usr/share/nginx/html/custom.css
-COPY script.js /usr/share/nginx/html/script.js
-COPY assets/ /usr/share/nginx/html/assets/
+WORKDIR /app
 
-# Provide a basic health check (optional)
-HEALTHCHECK CMD wget -q -O /dev/null http://localhost:80 || exit 1
+# No dependencies: server.js uses only the Node standard library
+COPY server.js ./
+COPY index.html style.css custom.css script.js ./public/
+COPY assets/ ./public/assets/
 
-# Nginx already exposes port 80
+ENV PORT=80
+# The container must accept traffic from CapRover's proxy, not just loopback
+ENV HOST=0.0.0.0
+EXPOSE 80
+
+HEALTHCHECK CMD wget -q -O /dev/null http://localhost:80/ || exit 1
+
+CMD ["node", "server.js"]
