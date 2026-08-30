@@ -8,7 +8,10 @@ const fs = require('node:fs');
 const readline = require('node:readline/promises');
 
 const REDIRECT_URI = 'http://localhost:3000/callback';
-const SCOPE = 'Files.ReadWrite offline_access';
+// Files.ReadWrite.AppFolder, not Files.ReadWrite: the grant is confined to one
+// dedicated folder Microsoft creates for this app. A leaked client secret and
+// refresh token together still cannot read or touch the rest of the OneDrive.
+const SCOPE = 'Files.ReadWrite.AppFolder offline_access';
 const ENV_FILE = '.env';
 const NL = String.fromCharCode(10);
 
@@ -29,9 +32,15 @@ const main = async () => {
 
 	const clientId = (await rl.question('Application (client) ID: ')).trim();
 	const clientSecret = (await rl.question('Client secret VALUE: ')).trim();
+	// Relative to the app folder now, not to the drive root
 	const folder =
-		(await rl.question('OneDrive folder [Brudleyp/Myndir]: ')).trim() ||
-		'Brudleyp/Myndir';
+		(await rl.question('Folder inside the app folder [Myndir]: ')).trim() ||
+		'Myndir';
+	// The shared code guests read off the invitation. Blank leaves uploads open
+	// to anyone who can load the site, which is a choice, not a default.
+	const passcode = (
+		await rl.question('Upload passcode for guests (blank = no code): ')
+	).trim();
 	rl.close();
 
 	const authUrl =
@@ -91,6 +100,7 @@ const main = async () => {
 		`MS_CLIENT_SECRET=${clientSecret}`,
 		`MS_REFRESH_TOKEN=${token.refresh_token}`,
 		`ONEDRIVE_FOLDER=${folder}`,
+		...(passcode ? [`UPLOAD_PASSCODE=${passcode}`] : []),
 		'TOKEN_FILE=.refresh_token',
 	];
 

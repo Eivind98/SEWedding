@@ -66,9 +66,9 @@
           </li>
           <li><a href="#kontakt" data-fo="Kontakt" data-da="Kontakt"></a></li>
           -->
-          <li>
+          <!-- <li>
             <a href="#myndir" data-fo="Deila myndir" data-da="Del billeder"></a>
-          </li>
+          </li> -->
         </ul>
       </div>
     </nav>
@@ -263,7 +263,8 @@
               >
             </p>
 
-            <div
+            OpenStreetMap embed - external frame, disabled by CSP
+<div
               class="aspect-video w-full border border-neutral-300/70 rounded-lg overflow-hidden shadow-sm"
             >
               <iframe
@@ -275,8 +276,9 @@
               >
               </iframe>
             </div>
+-->
 
-            <div class="flex flex-wrap gap-4 text-sm">
+            <!-- <div class="flex flex-wrap gap-4 text-sm">
               <a
                 class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900"
                 target="_blank"
@@ -295,8 +297,8 @@
               </a>
             </div>
           </div>
-        </section>
-
+        </section> -->
+<!-- 
         <section id="kortTrold">
           <h2
             class="text-3xl font-serif mb-4 text-rose-900"
@@ -310,9 +312,10 @@
               <code class="bg-neutral-100 px-1 py-0.5 rounded text-sm">
                 57.0685615, 9.8337351
               </code>
-            </p>
+            </p> -->
 
-            <div
+            <!-- OpenStreetMap embed - external frame, disabled by CSP
+<div
               class="aspect-video w-full border border-neutral-300/70 rounded-lg overflow-hidden shadow-sm"
             >
               <iframe
@@ -323,8 +326,9 @@
                 referrerpolicy="no-referrer-when-downgrade"
               ></iframe>
             </div>
+-->
 
-            <div class="flex flex-wrap gap-4 text-sm">
+            <!-- <div class="flex flex-wrap gap-4 text-sm">
               <a
                 class="inline-flex items-center gap-1 underline text-rose-700 hover:text-rose-900"
                 target="_blank"
@@ -367,49 +371,63 @@
             >
             </a>
           </p>
-          <div class="flex flex-wrap justify-center gap-4 mt-6">
-            <img
+          <div class="flex flex-wrap justify-center gap-4 mt-6"> -->
+            <!-- Pinterest hotlink - external image, disabled by CSP
+<img
               src="https://i.pinimg.com/1200x/92/db/b3/92dbb3adda2366fd95cc2f460f7878b2.jpg"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
             />
-            <img
+-->
+            <!-- Pinterest hotlink - external image, disabled by CSP
+<img
               src="https://i.pinimg.com/1200x/30/27/8d/30278d88efa488b716066a3b08921f45.jpg"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
             />
-            <img
+-->
+            <!-- Pinterest hotlink - external image, disabled by CSP
+<img
               src="https://i.pinimg.com/736x/9b/c9/90/9bc99081eeb5724e9a89529add6702a7.jpg"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
             />
-            <img
+-->
+            <!-- Pinterest hotlink - external image, disabled by CSP
+<img
               src="https://i.pinimg.com/736x/55/94/32/559432ade92d905bf0e07112beb5047b.jpg"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
             />
+-->
 
-            <img
+            <!-- Pinterest hotlink - external image, disabled by CSP
+<img
               src="https://i.pinimg.com/1200x/a7/78/07/a7780797b831dec7feb29d6efc2848d9.jpg"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
             />
-            <img
+-->
+            <!-- <img
               src="assets/WeirdPicture.png"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
-            />
-            <img
+            /> -->
+            <!-- Pinterest hotlink - external image, disabled by CSP
+<img
               src="https://i.pinimg.com/1200x/ed/2c/e7/ed2ce7cb1def7f7e540ecaefca0c6860.jpg"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
             />
-            <img
+-->
+            <!-- Pinterest hotlink - external image, disabled by CSP
+<img
               src="https://i.pinimg.com/736x/ca/9f/ff/ca9ffff552232055a8341e987f8937bf.jpg"
               alt="Dresscode Example"
               class="h-48 object-contain rounded-lg shadow-sm"
             />
-          </div>
+-->
+          <!-- </div>
         </section>
 
         <section id="ynski">
@@ -458,6 +476,39 @@
             data-fo="Hava tit tikið myndir ella video á brúdleypinum? Legg tey upp her, so savnast tey hjá okkum. Tit skulu hvørki hava konto ella logga inn."
             data-da="Har I taget billeder eller video til brylluppet? Læg dem op her, så samles de hos os. I skal hverken have en konto eller logge ind."
           ></p>
+
+          <div id="upload-passcode" class="upload-passcode" hidden>
+            <label
+              class="upload-passcode__label"
+              for="upload-passcode-input"
+              data-fo="Koda"
+              data-da="Koden"
+            ></label>
+            <div class="upload-passcode__row">
+              <input
+                id="upload-passcode-input"
+                class="upload-passcode__input"
+                type="text"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+              />
+              <button
+                type="button"
+                id="upload-passcode-button"
+                class="upload-button"
+                data-fo="Innrita"
+                data-da="Log ind"
+              ></button>
+            </div>
+            <p
+              id="upload-passcode-error"
+              class="upload-passcode__error"
+              hidden
+            ></p>
+          </div>
+
+          <p id="upload-status" class="upload-status" hidden></p>
 
           <div id="upload-drop" class="upload-drop">
             <input

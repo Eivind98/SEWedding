@@ -11,6 +11,9 @@ COPY assets/ ./public/assets/
 ENV PORT=80
 # The container must accept traffic from CapRover's proxy, not just loopback
 ENV HOST=0.0.0.0
+# Nothing reaches this container except through that proxy, so its
+# X-Forwarded-For is the only way to tell one guest from another
+ENV TRUST_PROXY=1
 EXPOSE 80
 
 HEALTHCHECK CMD wget -q -O /dev/null http://localhost:80/ || exit 1

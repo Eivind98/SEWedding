@@ -35,8 +35,18 @@ Only do that on a network you trust.
 
 ### 1. Decide the destination folder
 
-Pick where uploads should land, for example `Brudleyp/Myndir`. You do not need
-to create it by hand — `npm run check` in step 3a creates it for you.
+The relay asks Microsoft for `Files.ReadWrite.AppFolder`, not `Files.ReadWrite`.
+That confines it to a single folder OneDrive creates for this app registration,
+somewhere under `Apps/`. It cannot read, change or delete anything else in the
+drive — so if the client secret and refresh token both leaked, the worst an
+attacker could reach is the wedding photos, not the rest of your OneDrive.
+
+`ONEDRIVE_FOLDER` therefore names a path *inside* that app folder, and defaults
+to `Myndir`. You do not need to create it by hand — `npm run check` in step 3a
+creates it for you.
+
+Move the photos wherever you like once they are collected; the couple's own
+OneDrive session is unrestricted, it is only this app that is boxed in.
 
 ### 2. Register an app in Microsoft Entra
 
@@ -168,10 +178,36 @@ Only those three are required. The rest have defaults:
 
 | Variable | Default | Set it when |
 | --- | --- | --- |
-| `ONEDRIVE_FOLDER` | `Brudleyp/Myndir` | uploads should land somewhere else |
+| `ONEDRIVE_FOLDER` | `Myndir` | uploads should land elsewhere inside the app folder |
 | `TOKEN_FILE` | `/data/refresh_token` | never on CapRover — the default is the volume |
+| `UPLOAD_PASSCODE` | unset (open to all) | guests should need a code from the invitation |
+| `TOKEN_ENCRYPTION_KEY` | unset | the stored token should be encrypted at rest |
+| `ALLOWED_ORIGINS` | unset (any origin) | pinning the upload API to the real domain |
+| `RATE_LIMIT_MAX_REQUESTS` | `60` | the default window is too tight or too loose |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | as above |
+| `PASSCODE_MAX_FAILURES` | `5` | wrong guesses lock guests out too easily |
+| `PASSCODE_LOCKOUT_MINUTES` | `5` | that lockout should be shorter or longer |
+| `TRUST_PROXY` | unset | never — the Dockerfile sets 1 |
 | `PORT` | `3000` | never — the Dockerfile sets 80 |
 | `HOST` | `127.0.0.1` | never — the Dockerfile sets 0.0.0.0 |
+
+`ALLOWED_ORIGINS` takes a comma-separated list of origins
+(`https://brudleyp.example`). Left unset, any origin may call
+`/api/upload-session`. Set it and a request without a matching `Origin` header
+is refused — which includes requests from something that is not a browser, so
+set it only once the final domain is known.
+
+`TOKEN_ENCRYPTION_KEY` is optional: 32 bytes as 64 hex characters or base64.
+With it set, `/data/refresh_token` holds an AES-256-GCM envelope instead of the
+bare token, so a copy of the volume alone — a snapshot, a backup — is useless
+without the key from the environment. An existing plaintext file is re-sealed on
+the next start. It is a narrow gain, since anyone who can read the volume from
+inside the container can usually read the environment too; leaving it unset
+keeps the previous behaviour and never blocks uploads. Generate one with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
 
 Do not set `TOKEN_FILE` on CapRover. A relative path would put the rotated
 token inside the container instead of on the volume, and it would be lost on
@@ -187,13 +223,86 @@ Under **HTTP Settings**, enable HTTPS.
 
 Then click **Save & Update**.
 
+### The upload passcode
+
+Set `UPLOAD_PASSCODE` to a shared code and print it on the invitation. Without
+it, anyone who finds the site can fill the folder up to the drive quota.
+
+```
+UPLOAD_PASSCODE=<pick-your-own>
+```
+
+Guests see a passcode box with a **Log ind** button, and nothing else — the drop
+zone only appears once the passcode is accepted, along with a green "logged in"
+line, so it is never unclear whether the page is ready. The browser remembers
+the passcode and logs them straight back in next visit.
+
+The box only appears when a passcode is actually configured; the page asks
+`/api/upload-config` on load. If the passcode stops working mid-batch, the queue
+pauses instead of failing the files, and logging back in carries on with the
+same photos.
+
+It is one shared code, not a per-guest login: anyone who has the invitation can
+pass it on. It raises the bar from "anyone who finds the URL" to "anyone who was
+invited", which is the level a wedding needs. Some specifics:
+
+- Compared in constant time against a hash of both sides, so neither the code
+  nor its length leaks through response timing.
+- Five wrong guesses lock that client out for five minutes, counted separately
+  from the ordinary rate limit — a four-digit code would otherwise fall in
+  minutes. A correct entry clears the counter.
+
+  The count is per IP. Guests arrive on their own mobile connections rather than
+  one shared network, so a lockout is one person who mistyped, not a room full
+  of them. A locked-out client is refused even with the right passcode, so
+  raise `PASSCODE_MAX_FAILURES` if guests are ever likely to share an address.
+- Sent in an `X-Upload-Passcode` header, never a query string, so it stays out
+  of proxy logs and browser history.
+- Checked before anything reaches Microsoft, so a wrong code costs no Graph
+  call.
+
+Leave it unset and the endpoint behaves as it did before; the startup log says
+so in capitals either way.
+
+### What the upload endpoint will and will not accept
+
+Beyond the passcode, `/api/upload-session` is deliberately narrow about what it
+will do:
+
+- **Only media extensions.** `jpg jpeg png webp gif avif heic heif mp4 mov m4v
+  3gp`. Everything else is refused with 415 before any upload URL exists, which
+  covers executables, installers, scripts, shortcuts, archives, macro-enabled
+  documents, HTML and SVG.
+- **The stored name is rebuilt, never passed through.** Interior dots are
+  flattened, so `photo.jpg.exe` cannot be stored still carrying a second
+  extension. Direction-override and zero-width characters — the trick that makes
+  a file render as `sumar.jpg` while ending in `.exe` — are stripped before the
+  extension is read. Path separators are dropped, so a name cannot walk out of
+  the folder.
+- **Rate limited per client**, and optionally locked to one origin.
+- **The access token never leaves the server.** The browser only ever receives a
+  pre-authenticated upload URL, which is valid for one item path for a few
+  minutes and grants nothing else.
+
+What this does **not** do is inspect the bytes. The browser uploads straight to
+Microsoft, so the server never sees file contents — an executable renamed to
+`.jpg` would still land in the folder. Two things limit what that is worth to an
+attacker: nothing uploaded is ever served back by this site (the static handler
+serves a fixed allowlist and has no download route, so nothing can be executed
+*from* the site), and the app-folder scope keeps the damage inside one folder.
+Microsoft also scans OneDrive content for known malware on its side.
+
+If that gap ever matters, the fix is to relay the bytes through the server so it
+can check magic numbers and enforce a size cap before forwarding to Graph.
+
 ### Turning it off
 
 Deleting the app registration in Entra revokes the refresh token immediately and
 stops all uploads. That is the clean off-switch once the photos are collected.
 
 Note that CapRover stores environment variables in plaintext on the server, so
-do not reuse this client secret anywhere else.
+do not reuse this client secret anywhere else. The app-folder scope is what
+bounds the consequences if it ever leaks.
 
 ## Deploying on CapRover
 

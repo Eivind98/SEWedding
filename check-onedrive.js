@@ -9,10 +9,12 @@ const {
 	MS_CLIENT_SECRET,
 	MS_REFRESH_TOKEN,
 	// Same default as server.js, so the two never disagree about the destination
-	ONEDRIVE_FOLDER = 'Brudleyp/Myndir',
+	ONEDRIVE_FOLDER = 'Myndir',
 } = process.env;
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
+// The token is scoped to the app folder, so this is as far up as it can see
+const APP_FOLDER = `${GRAPH}/me/drive/special/approot`;
 
 // A .env saved with Windows CRLF endings leaves a carriage return on
 // every value, which Microsoft rejects
@@ -46,7 +48,7 @@ const ensureFolder = async (token, folderPath) => {
 
 	for (const segment of folderPath.split('/').filter(Boolean)) {
 		const current = parent ? `${parent}/${segment}` : segment;
-		const probe = await fetch(`${GRAPH}/me/drive/root:/${encodePath(current)}`, {
+		const probe = await fetch(`${APP_FOLDER}:/${encodePath(current)}`, {
 			headers: auth,
 		});
 
@@ -54,8 +56,8 @@ const ensureFolder = async (token, folderPath) => {
 			console.log(`  exists   /${current}`);
 		} else if (probe.status === 404) {
 			const parentUrl = parent
-				? `${GRAPH}/me/drive/root:/${encodePath(parent)}:/children`
-				: `${GRAPH}/me/drive/root/children`;
+				? `${APP_FOLDER}:/${encodePath(parent)}:/children`
+				: `${APP_FOLDER}/children`;
 			const created = await fetch(parentUrl, {
 				method: 'POST',
 				headers: { ...auth, 'Content-Type': 'application/json' },
@@ -94,18 +96,32 @@ const main = async () => {
 	const token = await getAccessToken();
 	console.log('  ok\n');
 
-	console.log('Reading drive...');
+	console.log('Reading the app folder...');
+	const rootResponse = await fetch(APP_FOLDER, {
+		headers: { Authorization: `Bearer ${token}` },
+	});
+	if (!rootResponse.ok) {
+		throw new Error(await rootResponse.text());
+	}
+	const appFolder = await rootResponse.json();
+	console.log(`  path     ${appFolder.parentReference?.path ?? ''}/${appFolder.name}`);
+
+	// Drive-wide quota needs a drive-wide scope, which is exactly what this app
+	// no longer asks for. Report it when it happens to be readable, never fail.
 	const driveResponse = await fetch(`${GRAPH}/me/drive`, {
 		headers: { Authorization: `Bearer ${token}` },
 	});
-	if (!driveResponse.ok) {
-		throw new Error(await driveResponse.text());
+	if (driveResponse.ok) {
+		const drive = await driveResponse.json();
+		if (drive.quota?.total) {
+			console.log(
+				`  space    ${gigabytes(drive.quota.remaining)} free of ${gigabytes(drive.quota.total)}`
+			);
+		}
+	} else {
+		console.log('  space    not visible under the app-folder scope');
 	}
-	const drive = await driveResponse.json();
-	console.log(`  account  ${drive.owner?.user?.displayName ?? 'unknown'}`);
-	console.log(
-		`  space    ${gigabytes(drive.quota.remaining)} free of ${gigabytes(drive.quota.total)}\n`
-	);
+	console.log('');
 
 	console.log(`Checking folder ${clean(ONEDRIVE_FOLDER)}...`);
 	await ensureFolder(token, clean(ONEDRIVE_FOLDER));
