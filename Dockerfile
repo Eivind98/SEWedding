@@ -1,4 +1,4 @@
-# Static site + OneDrive upload relay
+# Static site + guest photo upload, saved to the /data volume
 FROM node:20-alpine
 
 WORKDIR /app
@@ -16,6 +16,6 @@ ENV HOST=0.0.0.0
 ENV TRUST_PROXY=1
 EXPOSE 80
 
-HEALTHCHECK CMD wget -q -O /dev/null http://localhost:80/ || exit 1
+HEALTHCHECK CMD wget -q -O /dev/null http://localhost:80/health || exit 1
 
 CMD ["node", "server.js"]

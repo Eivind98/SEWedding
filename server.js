@@ -6,14 +6,16 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const {
-	MS_CLIENT_ID,
-	MS_CLIENT_SECRET,
-	MS_REFRESH_TOKEN,
-	// Relative to the app folder, not to the drive root
-	ONEDRIVE_FOLDER = 'Myndir',
-	TOKEN_FILE = '/data/refresh_token',
-	TOKEN_ENCRYPTION_KEY,
+	UPLOAD_DIR = '/data/uploads',
 	UPLOAD_PASSCODE = '',
+	// Per file. A phone video runs to a few hundred MB; anything larger is
+	// almost certainly a mistake or an attempt to fill the disk.
+	MAX_FILE_MB = '512',
+	// Everything together. The CapRover box runs other apps, and a full disk
+	// takes all of them down, not just this one. MAX_TOTAL_MB wins if set, for
+	// when a whole gigabyte is too coarse.
+	MAX_TOTAL_GB = '20',
+	MAX_TOTAL_MB = '',
 	ALLOWED_ORIGINS = '',
 	RATE_LIMIT_WINDOW_MS = '60000',
 	RATE_LIMIT_MAX_REQUESTS = '60',
@@ -25,9 +27,20 @@ const {
 } = process.env;
 
 // Env values can arrive with stray whitespace: a .env saved with Windows
-// CRLF endings leaves a carriage return on every value, and Microsoft
-// rejects a token carrying one as an unmatchable grant.
+// CRLF endings leaves a carriage return on every value.
 const clean = (value) => String(value || '').trim();
+
+const toPositiveInt = (value, fallback) => {
+	const parsed = Number.parseInt(clean(value), 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const uploadDir = clean(UPLOAD_DIR) || '/data/uploads';
+const tempDir = path.join(uploadDir, '.incoming');
+const maxFileBytes = toPositiveInt(MAX_FILE_MB, 512) * 1024 * 1024;
+const maxTotalBytes = clean(MAX_TOTAL_MB)
+	? toPositiveInt(MAX_TOTAL_MB, 20480) * 1024 * 1024
+	: toPositiveInt(MAX_TOTAL_GB, 20) * 1024 * 1024 * 1024;
 
 // The image puts the site in public/; running from a checkout it sits alongside
 const PUBLIC_DIR = fs.existsSync(path.join(__dirname, 'public'))
@@ -46,12 +59,9 @@ const MIME_TYPES = {
 	'.jpeg': 'image/jpeg',
 };
 
-// The page loads nothing from anywhere but this origin: the OpenStreetMap
-// frames and the Pinterest hotlinks are commented out in index.html, so
-// img-src and frame-src can stay shut. connect-src is the one exception the
-// upload needs - the browser PUTs photo chunks straight to whatever host
-// Microsoft names in the upload URL, and that host varies by account
-// (1drv.com, sharepoint.com), so it cannot be pinned to a literal.
+// The page now loads and uploads to nothing but this origin, so every source
+// can be pinned to 'self'. The directive that earns its keep is script-src:
+// nothing but our own script.js may execute.
 const CONTENT_SECURITY_POLICY = [
 	"default-src 'self'",
 	"base-uri 'self'",
@@ -61,7 +71,7 @@ const CONTENT_SECURITY_POLICY = [
 	"img-src 'self' data:",
 	"font-src 'self' data:",
 	"frame-src 'none'",
-	"connect-src 'self' https:",
+	"connect-src 'self'",
 	"form-action 'self'",
 	"frame-ancestors 'none'",
 ].join('; ');
@@ -98,11 +108,6 @@ const isOriginAllowed = (value) => {
 	}
 };
 
-const toPositiveInt = (value, fallback) => {
-	const parsed = Number.parseInt(clean(value), 10);
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
-
 const rateWindowMs = toPositiveInt(RATE_LIMIT_WINDOW_MS, 60000);
 const rateMax = toPositiveInt(RATE_LIMIT_MAX_REQUESTS, 60);
 const rateStore = new Map();
@@ -122,9 +127,8 @@ const getClientIp = (request) => {
 	return request.socket.remoteAddress || 'unknown';
 };
 
-// A fixed window per client. The endpoint is unauthenticated and every call
-// spends a Graph request, so this is about stopping a script, not a guest -
-// the default leaves room for a phone emptying its camera roll.
+// Guards starting an upload and logging in. Chunks of an accepted upload are
+// deliberately exempt: they are already bounded by the file's declared size.
 const isRateLimited = (request) => {
 	const ip = getClientIp(request);
 	const now = Date.now();
@@ -139,15 +143,13 @@ const isRateLimited = (request) => {
 	return seen.count > rateMax;
 };
 
-// The shared code from the invitation. Left unset, the endpoint stays open to
-// anyone who can load the page - which is the previous behaviour, and is
-// announced at startup so it cannot be forgotten silently.
+// The shared code from the invitation. Left unset, uploads stay open to anyone
+// who can load the page - announced at startup so it cannot be missed.
 const uploadPasscode = clean(UPLOAD_PASSCODE);
 
 // Both sides are hashed before the comparison: timingSafeEqual needs equal
 // lengths, and hashing supplies that without leaking how long the real
-// passcode is. The compare itself is constant-time so a guess cannot be
-// narrowed down character by character.
+// passcode is. The compare itself is constant-time.
 const passcodeMatches = (supplied) => {
 	const digest = (value) =>
 		crypto.createHash('sha256').update(String(value), 'utf8').digest();
@@ -155,14 +157,11 @@ const passcodeMatches = (supplied) => {
 	return crypto.timingSafeEqual(digest(clean(supplied)), digest(uploadPasscode));
 };
 
-// A short code invites guessing, and the ordinary rate limit is far too loose
-// to stop it. Wrong codes get their own, much tighter budget.
-//
 // Five tries per five minutes. Guests arrive on their own mobile connections
 // rather than one shared network, so a locked-out address is one person who
-// mistyped, not a room full of them - and that person waits five minutes.
-// A locked-out client is refused even with the right passcode, because
-// checking it first would let an attacker test codes as fast as they like.
+// mistyped. A locked-out client is refused even with the right passcode,
+// because checking it first would let an attacker test codes as fast as
+// they like.
 const PASSCODE_LOCKOUT_MS =
 	toPositiveInt(process.env.PASSCODE_LOCKOUT_MINUTES, 5) * 60 * 1000;
 const PASSCODE_MAX_FAILURES = toPositiveInt(
@@ -171,9 +170,26 @@ const PASSCODE_MAX_FAILURES = toPositiveInt(
 );
 const passcodeFailures = new Map();
 
+const isLockedOut = (ip) => {
+	const seen = passcodeFailures.get(ip);
+	if (!seen || Date.now() - seen.windowStart >= PASSCODE_LOCKOUT_MS) {
+		return false;
+	}
+	return seen.count >= PASSCODE_MAX_FAILURES;
+};
+
+const recordPasscodeFailure = (ip) => {
+	const now = Date.now();
+	const seen = passcodeFailures.get(ip);
+	if (!seen || now - seen.windowStart >= PASSCODE_LOCKOUT_MS) {
+		passcodeFailures.set(ip, { count: 1, windowStart: now });
+		return;
+	}
+	seen.count += 1;
+};
+
 // Returns null when the request may go ahead, or the [status, body] to refuse
-// it with. Shared by the login check and the upload itself, so the two can
-// never drift apart on what counts as a valid passcode.
+// it with. Shared by every guarded endpoint so they cannot drift apart.
 const passcodeRejection = (request) => {
 	if (!uploadPasscode) {
 		return null;
@@ -198,222 +214,11 @@ const passcodeRejection = (request) => {
 	return null;
 };
 
-const isLockedOut = (ip) => {
-	const seen = passcodeFailures.get(ip);
-	if (!seen || Date.now() - seen.windowStart >= PASSCODE_LOCKOUT_MS) {
-		return false;
-	}
-	return seen.count >= PASSCODE_MAX_FAILURES;
-};
-
-const recordPasscodeFailure = (ip) => {
-	const now = Date.now();
-	const seen = passcodeFailures.get(ip);
-	if (!seen || now - seen.windowStart >= PASSCODE_LOCKOUT_MS) {
-		passcodeFailures.set(ip, { count: 1, windowStart: now });
-		return;
-	}
-	seen.count += 1;
-};
-
-// Both maps would otherwise keep one entry per IP for the life of the process
-setInterval(() => {
-	const now = Date.now();
-	for (const [ip, seen] of rateStore) {
-		if (now - seen.windowStart >= rateWindowMs * 2) {
-			rateStore.delete(ip);
-		}
-	}
-	for (const [ip, seen] of passcodeFailures) {
-		if (now - seen.windowStart >= PASSCODE_LOCKOUT_MS) {
-			passcodeFailures.delete(ip);
-		}
-	}
-}, Math.min(rateWindowMs, 60000)).unref();
-
-// Optional hardening: with TOKEN_ENCRYPTION_KEY set the persisted token is
-// sealed with AES-256-GCM, so a copy of the /data volume on its own - a
-// snapshot, a backup - is useless without the key from the environment.
-// Without the key the file is written as before: uploads must never break
-// over an extra that was not configured.
-const parseEncryptionKey = (value) => {
-	const raw = clean(value);
-	if (!raw) {
-		return null;
-	}
-	const key = /^[\da-fA-F]{64}$/.test(raw)
-		? Buffer.from(raw, 'hex')
-		: Buffer.from(raw, 'base64');
-	return key.length === 32 ? key : null;
-};
-
-const encryptionKey = parseEncryptionKey(TOKEN_ENCRYPTION_KEY);
-
-const encryptToken = (token) => {
-	const iv = crypto.randomBytes(12); // the size GCM is specified around
-	const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey, iv);
-	const sealed = Buffer.concat([cipher.update(token, 'utf8'), cipher.final()]);
-
-	return JSON.stringify({
-		version: 1,
-		alg: 'AES-256-GCM',
-		iv: iv.toString('base64'),
-		tag: cipher.getAuthTag().toString('base64'),
-		data: sealed.toString('base64'),
-	});
-};
-
-const decryptToken = (envelope) => {
-	const decipher = crypto.createDecipheriv(
-		'aes-256-gcm',
-		encryptionKey,
-		Buffer.from(envelope.iv, 'base64')
-	);
-	decipher.setAuthTag(Buffer.from(envelope.tag, 'base64'));
-
-	return Buffer.concat([
-		decipher.update(Buffer.from(envelope.data, 'base64')),
-		decipher.final(),
-	]).toString('utf8');
-};
-
-// A refresh token is never JSON, so the envelope tells the two formats apart
-const readEnvelope = (stored) => {
-	try {
-		const parsed = JSON.parse(stored);
-		return parsed && parsed.alg === 'AES-256-GCM' ? parsed : null;
-	} catch {
-		return null;
-	}
-};
-
-const readStoredToken = () => {
-	try {
-		return fs.readFileSync(TOKEN_FILE, 'utf8').trim();
-	} catch (error) {
-		if (error.code !== 'ENOENT') {
-			console.error('could not read stored refresh token:', error.message);
-		}
-		return '';
-	}
-};
-
-// Microsoft rotates the refresh token on every use, and CapRover restarts the
-// container on every deploy, so the current one has to outlive the process.
-const saveRefreshToken = (token) => {
-	try {
-		fs.mkdirSync(path.dirname(TOKEN_FILE), { recursive: true, mode: 0o700 });
-
-		// Write then rename: a crash mid-write cannot leave a truncated file
-		// where the only copy of a rotated grant is supposed to be.
-		const temporary = `${TOKEN_FILE}.tmp-${process.pid}`;
-		fs.writeFileSync(temporary, encryptionKey ? encryptToken(token) : token, {
-			mode: 0o600,
-		});
-		fs.renameSync(temporary, TOKEN_FILE);
-	} catch (error) {
-		console.error('could not persist refresh token:', error.message);
-	}
-};
-
-const loadRefreshToken = () => {
-	const stored = readStoredToken();
-	if (!stored) {
-		return clean(MS_REFRESH_TOKEN);
-	}
-
-	const envelope = readEnvelope(stored);
-	if (!envelope) {
-		return stored; // written before a key was configured
-	}
-	if (!encryptionKey) {
-		console.error(
-			'stored refresh token is encrypted but TOKEN_ENCRYPTION_KEY is unset'
-		);
-		return clean(MS_REFRESH_TOKEN);
-	}
-
-	try {
-		return decryptToken(envelope);
-	} catch (error) {
-		console.error('could not decrypt stored refresh token:', error.message);
-		return clean(MS_REFRESH_TOKEN);
-	}
-};
-
-// The file is the copy that survives a restart; this is the live one the
-// process refreshes against, so a rotation is never read back mid-flight.
-let refreshToken = loadRefreshToken();
-
-// Seal a token that predates the key, or the seed from the environment, rather
-// than waiting for the next rotation to write the file in the wanted format.
-if (refreshToken && encryptionKey && !readEnvelope(readStoredToken())) {
-	saveRefreshToken(refreshToken);
-}
-
-let accessToken = null;
-let accessTokenExpiry = 0;
-let refreshInFlight = null;
-
-// A guest dropping a folder of photos fires several upload-session requests at
-// once. Without the shared promise every one of them spends the same refresh
-// token in parallel, and Microsoft hands each caller its own rotated
-// replacement - all but the last one lost.
-const getAccessToken = async () => {
-	if (accessToken && Date.now() < accessTokenExpiry) {
-		return accessToken;
-	}
-	if (refreshInFlight) {
-		return refreshInFlight;
-	}
-
-	refreshInFlight = (async () => {
-		const response = await fetch(
-			'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
-			{
-				method: 'POST',
-				body: new URLSearchParams({
-					client_id: clean(MS_CLIENT_ID),
-					client_secret: clean(MS_CLIENT_SECRET),
-					refresh_token: refreshToken,
-					grant_type: 'refresh_token',
-				}),
-			}
-		);
-
-		if (!response.ok) {
-			// Truncated: enough for the AADSTS code the README indexes, without
-			// pasting an unbounded upstream body into the container logs
-			const detail = (await response.text()).slice(0, 300);
-			throw new Error(`token refresh failed (${response.status}): ${detail}`);
-		}
-
-		const token = await response.json();
-		if (!token.access_token) {
-			throw new Error('token refresh failed: no access_token in response');
-		}
-
-		accessToken = token.access_token;
-		accessTokenExpiry =
-			Date.now() + Math.max(60, Number(token.expires_in) - 300) * 1000;
-
-		if (token.refresh_token) {
-			refreshToken = token.refresh_token;
-			saveRefreshToken(refreshToken);
-		}
-		return accessToken;
-	})();
-
-	try {
-		return await refreshInFlight;
-	} finally {
-		refreshInFlight = null;
-	}
-};
+// ---------------------------------------------------------------- file names
 
 // What a phone camera produces. Anything else - and that includes every
-// executable, script, shortcut, installer and archive - never gets an upload
-// session, so it never reaches the drive at all.
+// executable, script, shortcut, installer and archive - is refused before a
+// single byte is accepted.
 const ALLOWED_EXTENSIONS = new Set([
 	'jpg',
 	'jpeg',
@@ -431,16 +236,14 @@ const ALLOWED_EXTENSIONS = new Set([
 
 // Direction overrides and zero-width characters let a name render in a file
 // list as "sumar.jpg" while the bytes actually end in ".exe". Control
-// characters do the same trick with a different mechanism. Both come off
-// before anything looks at the extension.
+// characters do the same trick with a different mechanism.
 const stripDisguises = (value) =>
 	value.replace(
 		/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,
 		''
 	);
 
-// Returns null for anything not on the allowlist - the caller turns that into
-// a refusal rather than trying to salvage a name.
+// Returns null for anything not on the allowlist.
 const safeName = (name) => {
 	const base = stripDisguises(String(name || ''))
 		.split(/[\\/]/)
@@ -472,46 +275,134 @@ const safeName = (name) => {
 	return `${stem}.${extension}`;
 };
 
-// Every path is addressed relative to the app folder Microsoft keeps for this
-// registration. The token is scoped to it, so the rest of the drive is out of
-// reach even if something here got a path wrong.
-const APP_FOLDER =
-	'https://graph.microsoft.com/v1.0/me/drive/special/approot';
+// ------------------------------------------------------------ content checks
 
-// '..' is dropped rather than trusted: the scope already stops it escaping the
-// app folder, but a mistyped env var should not send photos somewhere odd.
-const uploadFolder = clean(ONEDRIVE_FOLDER)
-	.split('/')
-	.map((segment) => segment.trim())
-	.filter((segment) => segment && segment !== '.' && segment !== '..');
-
-const createUploadSession = async (name) => {
-	const token = await getAccessToken();
-	const itemPath = [...uploadFolder, name].map(encodeURIComponent).join('/');
-
-	const response = await fetch(
-		`${APP_FOLDER}:/${itemPath}:/createUploadSession`,
-		{
-			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({
-				item: { '@microsoft.graph.conflictBehavior': 'rename' },
-			}),
-		}
-	);
-
-	if (!response.ok) {
-		const detail = (await response.text()).slice(0, 300);
-		throw new Error(
-			`createUploadSession failed (${response.status}): ${detail}`
-		);
-	}
-
-	return response.json();
+// Now that the bytes come through this process, the extension can be checked
+// against what the file actually is. A renamed .exe does not survive this.
+const MAGIC = {
+	jpg: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+	png: (b) =>
+		b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+	gif: (b) => b.slice(0, 4).toString('latin1') === 'GIF8',
+	webp: (b) =>
+		b.slice(0, 4).toString('latin1') === 'RIFF' &&
+		b.slice(8, 12).toString('latin1') === 'WEBP',
+	// avif, heic, heif, mp4, mov, m4v and 3gp are all ISO base media files:
+	// a size field, then the literal "ftyp".
+	isobmff: (b) => b.slice(4, 8).toString('latin1') === 'ftyp',
 };
+
+const EXTENSION_CHECK = {
+	jpg: MAGIC.jpg,
+	jpeg: MAGIC.jpg,
+	png: MAGIC.png,
+	gif: MAGIC.gif,
+	webp: MAGIC.webp,
+	avif: MAGIC.isobmff,
+	heic: MAGIC.isobmff,
+	heif: MAGIC.isobmff,
+	mp4: MAGIC.isobmff,
+	mov: MAGIC.isobmff,
+	m4v: MAGIC.isobmff,
+	'3gp': MAGIC.isobmff,
+};
+
+const looksLikeItsExtension = (storedName, head) => {
+	const extension = storedName.slice(storedName.lastIndexOf('.') + 1);
+	const check = EXTENSION_CHECK[extension];
+	// 12 bytes covers every signature above
+	return check ? head.length >= 12 && check(head) : false;
+};
+
+// ----------------------------------------------------------------- storage
+
+fs.mkdirSync(tempDir, { recursive: true, mode: 0o700 });
+
+const directorySize = (dir) => {
+	let total = 0;
+	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+		if (entry.isFile()) {
+			try {
+				total += fs.statSync(path.join(dir, entry.name)).size;
+			} catch {
+				// vanished between listing and stat - not our problem
+			}
+		}
+	}
+	return total;
+};
+
+// Counted once at boot, then kept up to date as uploads land, so a full disk
+// is refused politely rather than crashing the box everything else runs on.
+let usedBytes = directorySize(uploadDir);
+
+// Anything still in .incoming at boot is from a container that was replaced
+// mid-upload. Those bytes are unreachable, so reclaim them.
+for (const entry of fs.readdirSync(tempDir)) {
+	try {
+		fs.unlinkSync(path.join(tempDir, entry));
+	} catch {
+		// leave it; the periodic sweep will try again
+	}
+}
+
+// Claims a filename atomically, so two guests uploading "IMG_1234.jpg" at the
+// same moment cannot end up writing over each other.
+const claimName = (wanted) => {
+	const dot = wanted.lastIndexOf('.');
+	const stem = wanted.slice(0, dot);
+	const extension = wanted.slice(dot);
+
+	for (let attempt = 0; attempt < 500; attempt += 1) {
+		const candidate =
+			attempt === 0 ? wanted : `${stem}-${attempt + 1}${extension}`;
+		const target = path.join(uploadDir, candidate);
+		try {
+			fs.closeSync(fs.openSync(target, 'wx'));
+			return target;
+		} catch (error) {
+			if (error.code !== 'EEXIST') {
+				throw error;
+			}
+		}
+	}
+	throw new Error('could not find a free filename');
+};
+
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+const sessions = new Map();
+
+const discardSession = (session) => {
+	sessions.delete(session.id);
+	usedBytes -= session.size; // the reservation goes back
+	try {
+		fs.unlinkSync(session.tempPath);
+	} catch {
+		// already gone
+	}
+};
+
+setInterval(() => {
+	const now = Date.now();
+
+	for (const [ip, seen] of rateStore) {
+		if (now - seen.windowStart >= rateWindowMs * 2) {
+			rateStore.delete(ip);
+		}
+	}
+	for (const [ip, seen] of passcodeFailures) {
+		if (now - seen.windowStart >= PASSCODE_LOCKOUT_MS) {
+			passcodeFailures.delete(ip);
+		}
+	}
+	for (const session of [...sessions.values()]) {
+		if (now - session.touched >= SESSION_TTL_MS) {
+			discardSession(session);
+		}
+	}
+}, Math.min(rateWindowMs, 60000)).unref();
+
+// ------------------------------------------------------------ http helpers
 
 const readBody = (request) =>
 	new Promise((resolve, reject) => {
@@ -535,8 +426,10 @@ const sendJson = (response, status, payload) => {
 };
 
 // Exactly what the Dockerfile copies into the image. Running from a checkout
-// the repo root doubles as the web root, so an allowlist is what keeps .env,
-// .refresh_token and .git from being served to anyone who asks.
+// the repo root doubles as the web root, so an allowlist is what keeps .env
+// and .git from being served to anyone who asks. Uploaded photos live outside
+// PUBLIC_DIR entirely and have no route at all - nothing a guest sends can be
+// fetched back off this site.
 const SITE_FILES = new Set([
 	'index.html',
 	'style.css',
@@ -552,8 +445,7 @@ const isServable = (segments) => {
 };
 
 // A stray percent sign is enough to make decodeURIComponent throw, and an
-// uncaught throw in the request handler takes the whole process down. Anything
-// undecodable is simply not a path we serve.
+// uncaught throw in the request handler takes the whole process down.
 const decodePath = (url) => {
 	try {
 		return decodeURIComponent(new URL(url, 'http://x').pathname);
@@ -597,10 +489,212 @@ const serveStatic = (request, response) => {
 	});
 };
 
+// ------------------------------------------------------------------ uploads
+
+const startSession = async (request, response) => {
+	let parsed;
+	try {
+		parsed = JSON.parse(await readBody(request)) || {};
+	} catch {
+		sendJson(response, 400, { error: 'invalid_json' });
+		return;
+	}
+
+	const { name, size } = parsed;
+	if (typeof name !== 'string' || !name.trim() || name.length > 300) {
+		sendJson(response, 400, { error: 'invalid_name' });
+		return;
+	}
+
+	const storedName = safeName(name);
+	if (!storedName) {
+		sendJson(response, 415, { error: 'unsupported_file_type' });
+		return;
+	}
+
+	if (!Number.isSafeInteger(size) || size <= 0) {
+		sendJson(response, 400, { error: 'invalid_size' });
+		return;
+	}
+	if (size > maxFileBytes) {
+		sendJson(response, 413, {
+			error: 'file_too_large',
+			maxBytes: maxFileBytes,
+		});
+		return;
+	}
+	if (usedBytes + size > maxTotalBytes) {
+		sendJson(response, 507, { error: 'storage_full' });
+		return;
+	}
+
+	const id = crypto.randomUUID();
+	const session = {
+		id,
+		storedName,
+		size,
+		received: 0,
+		checked: false,
+		tempPath: path.join(tempDir, id),
+		touched: Date.now(),
+	};
+
+	fs.closeSync(fs.openSync(session.tempPath, 'wx'));
+	sessions.set(id, session);
+	usedBytes += size; // reserved up front so parallel uploads cannot overcommit
+
+	sendJson(response, 200, { id, chunkSize: 8 * 1024 * 1024 });
+};
+
+// "bytes 0-8388607/23456789"
+const parseContentRange = (value) => {
+	const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(clean(value));
+	if (!match) {
+		return null;
+	}
+	const [, start, end, total] = match.map(Number);
+	if (end < start || end >= total) {
+		return null;
+	}
+	return { start, end, total };
+};
+
+const writeChunk = (session, request, expected) =>
+	new Promise((resolve, reject) => {
+		const stream = fs.createWriteStream(session.tempPath, {
+			flags: 'r+',
+			start: session.received,
+		});
+
+		let written = 0;
+		let failed = null;
+
+		const fail = (error) => {
+			if (!failed) {
+				failed = error;
+				stream.destroy();
+				request.destroy();
+				reject(error);
+			}
+		};
+
+		request.on('data', (chunk) => {
+			written += chunk.length;
+			// A client that sends more than it declared does not get to keep
+			// writing past the size we reserved for it.
+			if (written > expected) {
+				fail(new Error('chunk longer than its Content-Range'));
+			}
+		});
+
+		request.on('error', fail);
+		stream.on('error', fail);
+		stream.on('finish', () => {
+			if (failed) {
+				return;
+			}
+			if (written !== expected) {
+				reject(new Error('chunk shorter than its Content-Range'));
+				return;
+			}
+			resolve(written);
+		});
+
+		request.pipe(stream);
+	});
+
+const receiveChunk = async (request, response, id) => {
+	const session = sessions.get(id);
+	if (!session) {
+		sendJson(response, 404, { error: 'unknown_upload' });
+		return;
+	}
+
+	const range = parseContentRange(request.headers['content-range']);
+	if (!range) {
+		sendJson(response, 400, { error: 'bad_content_range' });
+		return;
+	}
+	if (range.total !== session.size) {
+		sendJson(response, 400, { error: 'size_mismatch' });
+		return;
+	}
+	// Strictly sequential: the client is told where to resume from rather than
+	// being trusted to seek, so a chunk can never land at the wrong offset.
+	if (range.start !== session.received) {
+		sendJson(response, 409, {
+			error: 'offset_mismatch',
+			expected: session.received,
+		});
+		return;
+	}
+
+	const expected = range.end - range.start + 1;
+	session.touched = Date.now();
+
+	try {
+		await writeChunk(session, request, expected);
+	} catch (error) {
+		discardSession(session);
+		console.error(`upload ${id} aborted: ${error.message}`);
+		if (!response.headersSent) {
+			sendJson(response, 400, { error: 'chunk_failed' });
+		}
+		return;
+	}
+
+	session.received += expected;
+
+	// Check what the file actually is as soon as there are enough bytes to
+	// tell, so a disguised file is dropped early instead of after a long upload.
+	if (!session.checked && session.received >= 12) {
+		const head = Buffer.alloc(12);
+		const handle = fs.openSync(session.tempPath, 'r');
+		try {
+			fs.readSync(handle, head, 0, 12, 0);
+		} finally {
+			fs.closeSync(handle);
+		}
+
+		if (!looksLikeItsExtension(session.storedName, head)) {
+			discardSession(session);
+			sendJson(response, 415, { error: 'content_does_not_match_extension' });
+			return;
+		}
+		session.checked = true;
+	}
+
+	if (session.received < session.size) {
+		sendJson(response, 200, { received: session.received, complete: false });
+		return;
+	}
+
+	// Complete: move it out of .incoming under a name that is free
+	try {
+		const finalPath = claimName(session.storedName);
+		fs.renameSync(session.tempPath, finalPath);
+		sessions.delete(session.id);
+		console.log(`stored ${path.basename(finalPath)} (${session.size} bytes)`);
+		sendJson(response, 200, {
+			received: session.received,
+			complete: true,
+			storedAs: path.basename(finalPath),
+		});
+	} catch (error) {
+		discardSession(session);
+		console.error(`could not store ${session.storedName}: ${error.message}`);
+		sendJson(response, 500, { error: 'could_not_store' });
+	}
+};
+
+// -------------------------------------------------------------------- server
+
 const handleRequest = async (request, response) => {
 	setSecurityHeaders(response);
 
-	if (request.method === 'POST' && request.url === '/api/upload-session') {
+	const url = request.url || '/';
+
+	if (request.method === 'POST' && url === '/api/upload-session') {
 		if (!isOriginAllowed(request.headers.origin)) {
 			sendJson(response, 403, { error: 'origin_not_allowed' });
 			return;
@@ -609,13 +703,11 @@ const handleRequest = async (request, response) => {
 			sendJson(response, 429, { error: 'rate_limited' });
 			return;
 		}
-
 		const rejection = passcodeRejection(request);
 		if (rejection) {
 			sendJson(response, rejection[0], rejection[1]);
 			return;
 		}
-
 		if (
 			!clean(request.headers['content-type'])
 				.toLowerCase()
@@ -625,41 +717,34 @@ const handleRequest = async (request, response) => {
 			return;
 		}
 
-		let name;
-		try {
-			({ name } = JSON.parse(await readBody(request)) || {});
-		} catch {
-			sendJson(response, 400, { error: 'invalid_json' });
+		await startSession(request, response);
+		return;
+	}
+
+	if (request.method === 'PUT' && url.startsWith('/api/upload/')) {
+		if (!isOriginAllowed(request.headers.origin)) {
+			sendJson(response, 403, { error: 'origin_not_allowed' });
+			return;
+		}
+		const rejection = passcodeRejection(request);
+		if (rejection) {
+			sendJson(response, rejection[0], rejection[1]);
 			return;
 		}
 
-		if (typeof name !== 'string' || !name.trim() || name.length > 300) {
-			sendJson(response, 400, { error: 'invalid_name' });
+		const id = url.slice('/api/upload/'.length);
+		if (!/^[0-9a-f-]{36}$/.test(id)) {
+			sendJson(response, 404, { error: 'unknown_upload' });
 			return;
 		}
 
-		// No allowlisted extension, no upload session - an executable never gets
-		// as far as a URL it could be written to.
-		const storedName = safeName(name);
-		if (!storedName) {
-			sendJson(response, 415, { error: 'unsupported_file_type' });
-			return;
-		}
-
-		try {
-			const session = await createUploadSession(storedName);
-			sendJson(response, 200, { uploadUrl: session.uploadUrl });
-		} catch (error) {
-			console.error('upload-session failed:', error.message);
-			sendJson(response, 502, { error: 'upload_session_failed' });
-		}
+		await receiveChunk(request, response, id);
 		return;
 	}
 
 	// Checks a passcode on its own, so the page can tell a guest they are in
-	// before they pick any files. Costs nothing upstream - it never touches
-	// Microsoft - and counts towards the same wrong-guess budget as an upload.
-	if (request.method === 'POST' && request.url === '/api/upload-login') {
+	// before they pick any files.
+	if (request.method === 'POST' && url === '/api/upload-login') {
 		if (!isOriginAllowed(request.headers.origin)) {
 			sendJson(response, 403, { error: 'origin_not_allowed' });
 			return;
@@ -668,7 +753,6 @@ const handleRequest = async (request, response) => {
 			sendJson(response, 429, { error: 'rate_limited' });
 			return;
 		}
-
 		const rejection = passcodeRejection(request);
 		if (rejection) {
 			sendJson(response, rejection[0], rejection[1]);
@@ -679,10 +763,19 @@ const handleRequest = async (request, response) => {
 		return;
 	}
 
-	// Lets the page decide whether to ask for a code, so the field never shows
-	// up when no passcode is configured. It reveals only whether one is needed,
-	// which any guest finds out on the first upload anyway.
-	if (request.method === 'GET' && request.url === '/api/upload-config') {
+	// Liveness probe for the Docker healthcheck and the deploy verifier
+	if (request.method === 'GET' && url === '/health') {
+		sendJson(response, 200, {
+			ok: true,
+			photos: fs.existsSync(uploadDir),
+			usedBytes,
+			maxTotalBytes,
+			passcodeRequired: Boolean(uploadPasscode),
+		});
+		return;
+	}
+
+	if (request.method === 'GET' && url === '/api/upload-config') {
 		sendJson(response, 200, { passcodeRequired: Boolean(uploadPasscode) });
 		return;
 	}
@@ -709,19 +802,15 @@ const server = http.createServer((request, response) => {
 	});
 });
 
-const missing = Object.entries({
-	MS_CLIENT_ID,
-	MS_CLIENT_SECRET,
-})
-	.filter(([, value]) => !clean(value))
-	.map(([key]) => key);
-
-if (!refreshToken) {
-	missing.push('MS_REFRESH_TOKEN');
-}
+const gigabytes = (bytes) => `${(bytes / 1024 ** 3).toFixed(1)} GB`;
 
 server.listen(PORT, HOST, () => {
 	console.log(`listening on ${HOST}:${PORT}`);
+	console.log(`photos saved to ${uploadDir}`);
+	console.log(
+		`storage: ${gigabytes(usedBytes)} used of ${gigabytes(maxTotalBytes)}, ` +
+			`max ${Math.round(maxFileBytes / 1024 / 1024)} MB per file`
+	);
 	console.log(
 		`upload rate limit: ${rateMax} requests / ${rateWindowMs}ms per client`
 	);
@@ -731,21 +820,20 @@ server.listen(PORT, HOST, () => {
 			: 'upload origin allowlist: off (ALLOWED_ORIGINS not set)'
 	);
 	console.log(
-		encryptionKey
-			? 'stored refresh token: encrypted at rest'
-			: 'stored refresh token: plaintext (set TOKEN_ENCRYPTION_KEY to encrypt)'
-	);
-	console.log(
 		uploadPasscode
 			? `upload passcode: required (${PASSCODE_MAX_FAILURES} wrong guesses locks a client out for ${PASSCODE_LOCKOUT_MS / 60000} minutes)`
 			: 'upload passcode: NOT SET - anyone who can load the site can upload'
 	);
 
-	if (missing.length) {
+	if (!uploadDir.startsWith('/data')) {
+		return;
+	}
+	try {
+		fs.accessSync(uploadDir, fs.constants.W_OK);
+	} catch {
 		console.log('');
-		console.log(`WARNING: uploads are disabled - missing ${missing.join(', ')}`);
-		console.log('The site will serve, but /api/upload-session will fail.');
-		console.log('Run `node get-refresh-token.js` to create a .env.');
+		console.log(`WARNING: ${uploadDir} is not writable.`);
+		console.log('On CapRover, add /data under Persistent Directories.');
 		console.log('');
 	}
 });

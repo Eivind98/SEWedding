@@ -104,7 +104,7 @@ if (siteNav && navToggle && navPanel) {
 	});
 }
 
-// Photo upload -> OneDrive relay
+// Photo upload -> saved on the server
 const uploadDrop = document.getElementById('upload-drop');
 const uploadInput = document.getElementById('upload-input');
 const uploadPick = document.getElementById('upload-pick');
@@ -301,6 +301,17 @@ if (uploadDrop && uploadInput && uploadPick && uploadList) {
 		return { li, state, fill };
 	};
 
+	// Every response the server can refuse an upload with, turned into flags
+	// the queue knows how to act on.
+	const describeFailure = (status, error) => {
+		error.rejectedType = status === 415;
+		error.rejectedPasscode = status === 401;
+		error.lockedOut = status === 429;
+		error.tooLarge = status === 413;
+		error.storageFull = status === 507;
+		return error;
+	};
+
 	const uploadFile = async (file, ui) => {
 		const response = await fetch('/api/upload-session', {
 			method: 'POST',
@@ -310,34 +321,51 @@ if (uploadDrop && uploadInput && uploadPick && uploadList) {
 				// sitting in a URL, where it lands in logs and history
 				'X-Upload-Passcode': passcode,
 			},
-			body: JSON.stringify({ name: file.name }),
+			body: JSON.stringify({ name: file.name, size: file.size }),
 		});
 		if (!response.ok) {
 			// The accept attribute is a filter, not a guarantee - a drop, or a
 			// file picker set to "all files", still reaches the server, which
-			// only hands out a session for image and video extensions.
-			const error = new Error(`upload session failed: ${response.status}`);
-			error.rejectedType = response.status === 415;
-			error.rejectedPasscode = response.status === 401;
-			error.lockedOut = response.status === 429;
-			throw error;
+			// only starts an upload for image and video extensions.
+			throw describeFailure(
+				response.status,
+				new Error(`upload session failed: ${response.status}`)
+			);
 		}
-		const { uploadUrl } = await response.json();
 
-		// The upload URL is pre-authenticated: never send an Authorization header
+		const { id, chunkSize } = await response.json();
+		const size = chunkSize || CHUNK_SIZE;
+
+		// The server writes strictly sequentially and tells us where it got to,
+		// so a dropped chunk is retried from the offset it reports rather than
+		// restarting the whole file.
 		let start = 0;
 		while (start < file.size) {
-			const end = Math.min(start + CHUNK_SIZE, file.size);
-			const chunk = await fetch(uploadUrl, {
+			const end = Math.min(start + size, file.size);
+			const chunk = await fetch(`/api/upload/${id}`, {
 				method: 'PUT',
 				headers: {
 					'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
+					'X-Upload-Passcode': passcode,
 				},
 				body: file.slice(start, end),
 			});
+
 			if (!chunk.ok) {
-				throw new Error(`chunk failed: ${chunk.status}`);
+				if (chunk.status === 409) {
+					// We disagree about the offset - carry on from the server's
+					const { expected } = await chunk.json().catch(() => ({}));
+					if (Number.isInteger(expected) && expected < file.size) {
+						start = expected;
+						continue;
+					}
+				}
+				throw describeFailure(
+					chunk.status,
+					new Error(`chunk failed: ${chunk.status}`)
+				);
 			}
+
 			start = end;
 			ui.fill.style.width = `${Math.round((start / file.size) * 100)}%`;
 		}
@@ -389,6 +417,10 @@ if (uploadDrop && uploadInput && uploadPick && uploadList) {
 				ui.li.classList.add('upload-item--error');
 				if (error.rejectedType) {
 					setText(ui.state, 'Bara myndir og filmar', 'Kun billeder og film');
+				} else if (error.tooLarge) {
+					setText(ui.state, 'Fílan er ov stór', 'Filen er for stor');
+				} else if (error.storageFull) {
+					setText(ui.state, 'Ikki meira pláss', 'Ikke mere plads');
 				} else {
 					setText(ui.state, 'Miseydnaðist', 'Mislykkedes');
 				}

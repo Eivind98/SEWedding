@@ -1,0 +1,75 @@
+name: Deploy
+
+# Manual only: nothing deploys on push. Run it from the Actions tab, or with
+# `gh workflow run deploy.yml`.
+on:
+  workflow_dispatch:
+
+# A half-finished deploy can leave CapRover in a partial state, so overlapping
+# runs queue instead of cancelling the one in flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CAPROVER_APP: se-wedding
+  CAPROVER_URL: https://captain.caprover.vormadal.com/
+  # Only used by the fallback check when CAPROVER_PASSWORD is not set.
+  # Change this if the app has a custom domain.
+  HEALTH_URL: https://se-wedding.caprover.vormadal.com/health
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install -g caprover
+
+      # Same command that works from your machine, with the token from secrets
+      - name: Deploy to CapRover
+        run: >
+          caprover deploy
+          -a ${{ env.CAPROVER_APP }}
+          -b master
+          --appToken ${{ secrets.CAPROVER_APP_TOKEN }}
+          -u ${{ env.CAPROVER_URL }}
+
+      # CapRover reports success as soon as the image is handed to the service,
+      # even if the process inside crashes immediately. This waits for the app
+      # to actually answer on /health, and dumps the build logs and the live
+      # container logs into this workflow output if it never does.
+      #
+      # Reading logs needs CapRover's admin API, which the app token cannot
+      # reach - hence the password. Skipped if that secret is not set, so the
+      # deploy still works without handing an admin credential to GitHub.
+      - name: Verify deploy
+        if: ${{ secrets.CAPROVER_PASSWORD != '' }}
+        uses: ./.github/actions/verify-caprover-deploy
+        with:
+          app-name: ${{ env.CAPROVER_APP }}
+          caprover-url: ${{ env.CAPROVER_URL }}
+          caprover-password: ${{ secrets.CAPROVER_PASSWORD }}
+          health-check-path: /health
+
+      - name: Check the app responds
+        if: ${{ secrets.CAPROVER_PASSWORD == '' }}
+        run: |
+          echo "CAPROVER_PASSWORD not set - skipping log collection."
+          echo "Polling ${{ env.HEALTH_URL }} instead; set the secret to get"
+          echo "build and container logs printed here when a deploy fails."
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 10 "${{ env.HEALTH_URL }}" > /dev/null; then
+              echo "App is up."
+              exit 0
+            fi
+            echo "[$attempt/30] not up yet..."
+            sleep 5
+          done
+          echo "App did not respond at ${{ env.HEALTH_URL }}"
+          exit 1

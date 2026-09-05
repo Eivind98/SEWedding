@@ -1,12 +1,12 @@
 # WeddingProject
 
-Wedding info site, plus a photo/video upload page that relays guest uploads
-straight into a private OneDrive folder. Guests need no account and no sign-in.
+Wedding info site, plus a page where guests upload photos and video. Uploads
+are saved to a folder on the server itself. Guests need no account and no
+sign-in — just a passcode from the invitation.
 
-The site is served by `server.js`, a small Node app with no dependencies. It
-serves the static files and exposes a single endpoint, `POST /api/upload-session`.
-Guest browsers upload their files **directly to Microsoft** in 10 MiB chunks, so
-the file bytes never pass through the server.
+The site is served by `server.js`, a small Node app with no dependencies. There
+is no cloud storage, no Microsoft account, no OAuth and nothing that expires:
+the server takes the bytes and writes them to disk.
 
 ## Local preview
 
@@ -14,14 +14,17 @@ the file bytes never pass through the server.
 npm run serve
 ```
 
-Then open http://localhost:3000. This picks up `.env` automatically once you
-have run the setup below; without it the page still serves and the server warns
-at startup that uploads are disabled.
+Then open http://localhost:3000. Without configuration it still serves the
+site; uploads go to `/data/uploads`, which on a normal machine will not be
+writable, so set somewhere else while developing:
 
-The local server binds to `127.0.0.1` only, so `.env` and `.refresh_token` in
-the working directory are not reachable from the network. It also serves just
-the site's own files — `index.html`, the two stylesheets, `script.js` and
-`assets/` — and returns 404 for everything else in the repo.
+```bash
+UPLOAD_DIR=./uploads UPLOAD_PASSCODE=test npm run serve
+```
+
+The local server binds to `127.0.0.1` only. It serves just the site's own
+files — `index.html`, the two stylesheets, `script.js` and `assets/` — and
+returns 404 for everything else, including every uploaded photo.
 
 To try the page from a phone on the same wifi, opt in explicitly:
 
@@ -31,158 +34,46 @@ HOST=0.0.0.0 npm run serve
 
 Only do that on a network you trust.
 
-## OneDrive upload relay setup
+## Where the photos go
 
-### 1. Decide the destination folder
+Uploads land in `UPLOAD_DIR`, which defaults to `/data/uploads`. On CapRover,
+`/data` must be a **Persistent Directory** or everything is wiped on the next
+deploy — see step 2 below.
 
-The relay asks Microsoft for `Files.ReadWrite.AppFolder`, not `Files.ReadWrite`.
-That confines it to a single folder OneDrive creates for this app registration,
-somewhere under `Apps/`. It cannot read, change or delete anything else in the
-drive — so if the client secret and refresh token both leaked, the worst an
-attacker could reach is the wedding photos, not the rest of your OneDrive.
+Uploaded files are never served back out. The static handler answers only from
+a fixed allowlist and has no route into the upload folder at all, so nothing a
+guest sends can be fetched off the site afterwards.
 
-`ONEDRIVE_FOLDER` therefore names a path *inside* that app folder, and defaults
-to `Myndir`. You do not need to create it by hand — `npm run check` in step 3a
-creates it for you.
-
-Move the photos wherever you like once they are collected; the couple's own
-OneDrive session is unrestricted, it is only this app that is boxed in.
-
-### 2. Register an app in Microsoft Entra
-
-Go to https://entra.microsoft.com and sign in with **the same personal Microsoft
-account that owns the OneDrive**. A free default directory is created for you on
-first use; no paid Azure subscription is needed.
-
-Navigate to **Identity → Applications → App registrations → New registration**,
-or use the direct link:
-
-```
-https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
-```
-
-Fill in the registration form:
-
-| Field | Value |
-| --- | --- |
-| Name | anything, e.g. `wedding-upload` |
-| Supported account types | **Personal Microsoft accounts only** |
-| Redirect URI | platform **Web**, value `http://localhost:3000/callback` |
-
-Both of these matter.
-
-The account type must not be a single-tenant option, or the `/consumers`
-sign-in endpoint used by this app rejects the login with `unauthorized_client`.
-"Personal Microsoft accounts only" maps exactly to that endpoint. The
-"any organizational directory and personal Microsoft accounts" option also
-works, but grants a wider audience than this needs.
-
-The platform must be **Web**, not **Single-page application**. Web means a
-confidential client, which is what lets the relay authenticate with a client
-secret. SPA registrations require PKCE and reject the secret outright.
-
-Then create a secret under **Manage → Certificates & secrets → Client secrets →
-New client secret**. Any description and expiry will do.
-
-Copy the **Value** column, not the Secret ID. The Value is roughly 40 random
-characters and usually contains a `~`; the Secret ID is a GUID. The Value is
-shown only on the screen that appears right after you click Add — navigate away
-or refresh and it is masked permanently. If you lose it, delete that secret and
-create a new one; nothing else needs changing.
-
-From the app's **Overview** page, note the **Application (client) ID**.
-
-### 3. Get a refresh token
-
-Personal OneDrive does not support app-only authentication, so the relay acts on
-your behalf using a refresh token you generate once:
+To collect the photos when it is all over, copy the folder off the server:
 
 ```bash
-node get-refresh-token.js
+ssh <your-server> "tar czf - -C /var/lib/docker/volumes/<volume>/_data ." > wedding-photos.tar.gz
 ```
 
-It prompts for the client ID, the secret, and the destination folder, prints a
-sign-in URL, and waits on `http://localhost:3000/callback` for the redirect.
-Sign in and approve. This runs on your own machine — it does not need the
-CapRover host.
+CapRover shows the exact host path for the volume under the app's **Persistent
+Directories**. Or open a terminal into the container from the CapRover
+dashboard and copy from `/data/uploads`.
 
-It then writes a `.env` file with everything the relay needs, and prints the
-same values for pasting into CapRover.
+## Setting it up
 
-`.env` holds your client secret in plaintext and is listed in `.gitignore`.
-Keep it that way — do not commit it.
+### 1. Environment variables
 
-### 3a. Test it locally before deploying
-
-First check the credentials without involving a browser:
-
-```bash
-npm run check
-```
-
-This refreshes the token, prints which OneDrive account it reached and how much
-space is free, and creates the destination folder if it is missing. If this
-passes, the credentials are good and anything that fails afterwards is a
-browser or upload problem rather than an authentication one.
-
-Then run the site:
-
-```bash
-npm run serve
-```
-
-This loads `.env` automatically if it is present, and warns at startup if the
-credentials are missing rather than failing later on the first upload. Open
-http://localhost:3000 and
-upload a photo; it should appear in your OneDrive folder within seconds. Doing
-this before deploying is worth it, because the CapRover redeploy loop is slow
-and the failures here are much easier to read — the terminal prints the exact
-Microsoft error.
-
-Common failures at this point:
-
-| Symptom | Cause |
-| --- | --- |
-| `AADSTS7000012` | `.env` saved with Windows CRLF line endings — see below |
-| `unauthorized_client` | App registered as single-tenant; see step 2 |
-| `invalid_client` | Wrong secret, or the Secret ID was copied instead of the Value |
-| `invalid_grant` | Refresh token stale or issued for a different registration; rerun this step |
-| `itemNotFound` | `ONEDRIVE_FOLDER` missing; rerun `npm run check` |
-
-`AADSTS7000012` deserves a note, because the message it carries ("the grant was
-obtained for a different tenant") is misleading. It is what Microsoft returns
-for any refresh token it cannot match, including one that is merely malformed.
-
-The usual cause is a `.env` written or edited by a Windows editor: CRLF line
-endings leave a trailing carriage return on every value, Node's `--env-file`
-parser does not strip it, and the secret and refresh token then go to Microsoft
-with a stray character appended. Let `get-refresh-token.js` write the file, or
-save it with LF endings. Both `server.js` and `check-onedrive.js` now trim their
-env values, so this specific trap is defused, but the same symptom appears for
-any stale or truncated token.
-
-### 4. Configure CapRover
-
-In the CapRover dashboard, open the app and go to **App Configs**.
-
-Under **Environmental Variables**, use **Bulk Edit** (refresh tokens are long
-and awkward to paste into the single-line field):
+None are required — the site serves without any. In practice you want two:
 
 ```
-MS_CLIENT_ID=...
-MS_CLIENT_SECRET=...
-MS_REFRESH_TOKEN=...
+UPLOAD_PASSCODE=<pick-your-own>
 ```
 
-Only those three are required. The rest have defaults:
+Everything else has a default:
 
 | Variable | Default | Set it when |
 | --- | --- | --- |
-| `ONEDRIVE_FOLDER` | `Myndir` | uploads should land elsewhere inside the app folder |
-| `TOKEN_FILE` | `/data/refresh_token` | never on CapRover — the default is the volume |
-| `UPLOAD_PASSCODE` | unset (open to all) | guests should need a code from the invitation |
-| `TOKEN_ENCRYPTION_KEY` | unset | the stored token should be encrypted at rest |
-| `ALLOWED_ORIGINS` | unset (any origin) | pinning the upload API to the real domain |
+| `UPLOAD_DIR` | `/data/uploads` | photos should be written somewhere else |
+| `UPLOAD_PASSCODE` | unset (open to all) | guests should need a passcode |
+| `MAX_FILE_MB` | `512` | a single file may be larger or smaller |
+| `MAX_TOTAL_GB` | `20` | the server has more or less room to spare |
+| `MAX_TOTAL_MB` | unset | a whole gigabyte is too coarse; wins over the above |
+| `ALLOWED_ORIGINS` | unset (any origin) | pinning uploads to the real domain |
 | `RATE_LIMIT_MAX_REQUESTS` | `60` | the default window is too tight or too loose |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | as above |
 | `PASSCODE_MAX_FAILURES` | `5` | wrong guesses lock guests out too easily |
@@ -191,157 +82,108 @@ Only those three are required. The rest have defaults:
 | `PORT` | `3000` | never — the Dockerfile sets 80 |
 | `HOST` | `127.0.0.1` | never — the Dockerfile sets 0.0.0.0 |
 
-`ALLOWED_ORIGINS` takes a comma-separated list of origins
-(`https://brudleyp.example`). Left unset, any origin may call
-`/api/upload-session`. Set it and a request without a matching `Origin` header
-is refused — which includes requests from something that is not a browser, so
-set it only once the final domain is known.
+`MAX_TOTAL_GB` matters more than it looks. The CapRover box runs other apps,
+and a full disk takes all of them down, not just this one. Once the budget is
+reached, uploads are refused politely rather than filling the disk.
 
-`TOKEN_ENCRYPTION_KEY` is optional: 32 bytes as 64 hex characters or base64.
-With it set, `/data/refresh_token` holds an AES-256-GCM envelope instead of the
-bare token, so a copy of the volume alone — a snapshot, a backup — is useless
-without the key from the environment. An existing plaintext file is re-sealed on
-the next start. It is a narrow gain, since anyone who can read the volume from
-inside the container can usually read the environment too; leaving it unset
-keeps the previous behaviour and never blocks uploads. Generate one with:
+### 2. CapRover
+
+In the app's **App Configs**:
+
+- Add `UPLOAD_PASSCODE` under **Environmental Variables**
+- Under **Persistent Directories**, add the path `/data`
+- Keep **Instance Count** at 1 — two containers would not share the folder
+- Under **HTTP Settings**, enable HTTPS
+
+Then **Save & Update**.
+
+### 3. Deploying
+
+Deploys are manual. Either run the CapRover CLI yourself:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+caprover deploy -a se-wedding -b master --appToken <token> -u https://captain.caprover.vormadal.com/
 ```
 
-Do not set `TOKEN_FILE` on CapRover. A relative path would put the rotated
-token inside the container instead of on the volume, and it would be lost on
-the next deploy.
+…or use the GitHub Actions workflow, which does the same thing and then tells
+you whether the app actually came up.
 
-Under **Persistent Directories**, add the path `/data`, and keep the app at one
-instance. Microsoft rotates the refresh token every time it is used, and every
-deploy or "Save & Update" restarts the container — `/data/refresh_token` is
-where the current token survives that. Without it the app falls back to the
-now-stale seed value in `MS_REFRESH_TOKEN`.
+Go to the repo's **Actions** tab → **Deploy** → **Run workflow**. It needs two
+repository secrets under Settings → Secrets and variables → Actions:
 
-Under **HTTP Settings**, enable HTTPS.
+| Secret | Where to find it |
+| --- | --- |
+| `CAPROVER_APP_TOKEN` | CapRover → the app → Deployment tab → App Token |
+| `CAPROVER_PASSWORD` | your CapRover dashboard password |
 
-Then click **Save & Update**.
+The workflow does not stop at "image handed over", which is all CapRover
+guarantees. It waits for the app to answer on `/health`, and if it never does,
+it prints the CapRover build logs **and** the live container logs into the
+workflow output — so a container that builds fine but crashes on startup is
+diagnosable without logging into CapRover.
 
-### The upload passcode
+## The upload passcode
 
-Set `UPLOAD_PASSCODE` to a shared code and print it on the invitation. Without
-it, anyone who finds the site can fill the folder up to the drive quota.
+Set `UPLOAD_PASSCODE` and print it on the invitation. Without it, anyone who
+finds the site can fill the folder.
 
-```
-UPLOAD_PASSCODE=<pick-your-own>
-```
-
-Guests see a passcode box with a **Log ind** button, and nothing else — the drop
+Guests see a passcode box with a **Log ind** button and nothing else — the drop
 zone only appears once the passcode is accepted, along with a green "logged in"
 line, so it is never unclear whether the page is ready. The browser remembers
 the passcode and logs them straight back in next visit.
 
-The box only appears when a passcode is actually configured; the page asks
-`/api/upload-config` on load. If the passcode stops working mid-batch, the queue
-pauses instead of failing the files, and logging back in carries on with the
-same photos.
+It is one shared passcode, not a per-guest login: anyone who has the invitation
+can pass it on. It raises the bar from "anyone who finds the URL" to "anyone who
+was invited", which is the level a wedding needs. Some specifics:
 
-It is one shared code, not a per-guest login: anyone who has the invitation can
-pass it on. It raises the bar from "anyone who finds the URL" to "anyone who was
-invited", which is the level a wedding needs. Some specifics:
-
-- Compared in constant time against a hash of both sides, so neither the code
-  nor its length leaks through response timing.
-- Five wrong guesses lock that client out for five minutes, counted separately
-  from the ordinary rate limit — a four-digit code would otherwise fall in
-  minutes. A correct entry clears the counter.
-
-  The count is per IP. Guests arrive on their own mobile connections rather than
-  one shared network, so a lockout is one person who mistyped, not a room full
-  of them. A locked-out client is refused even with the right passcode, so
-  raise `PASSCODE_MAX_FAILURES` if guests are ever likely to share an address.
+- Compared in constant time against a hash of both sides, so neither the
+  passcode nor its length leaks through response timing.
+- Five wrong guesses lock that client out for five minutes. A correct entry
+  clears the counter. The count is per IP; a locked-out client is refused even
+  with the right passcode, so raise `PASSCODE_MAX_FAILURES` if guests are ever
+  likely to share an address.
 - Sent in an `X-Upload-Passcode` header, never a query string, so it stays out
-  of proxy logs and browser history.
-- Checked before anything reaches Microsoft, so a wrong code costs no Graph
-  call.
+  of proxy logs and browser history. Checked on every chunk, not just at login.
 
-Leave it unset and the endpoint behaves as it did before; the startup log says
-so in capitals either way.
+Leave it unset and uploads are open to everyone; the startup log says so in
+capitals either way.
 
-### What the upload endpoint will and will not accept
-
-Beyond the passcode, `/api/upload-session` is deliberately narrow about what it
-will do:
+## What the upload endpoint will and will not accept
 
 - **Only media extensions.** `jpg jpeg png webp gif avif heic heif mp4 mov m4v
-  3gp`. Everything else is refused with 415 before any upload URL exists, which
+  3gp`. Everything else is refused before a single byte is accepted, which
   covers executables, installers, scripts, shortcuts, archives, macro-enabled
   documents, HTML and SVG.
+- **The bytes must match the extension.** As soon as twelve bytes have arrived,
+  the file's signature is checked against what its name claims. An executable
+  renamed to `holiday.jpg` is dropped mid-upload, and the partial file deleted.
 - **The stored name is rebuilt, never passed through.** Interior dots are
   flattened, so `photo.jpg.exe` cannot be stored still carrying a second
   extension. Direction-override and zero-width characters — the trick that makes
   a file render as `sumar.jpg` while ending in `.exe` — are stripped before the
   extension is read. Path separators are dropped, so a name cannot walk out of
-  the folder.
-- **Rate limited per client**, and optionally locked to one origin.
-- **The access token never leaves the server.** The browser only ever receives a
-  pre-authenticated upload URL, which is valid for one item path for a few
-  minutes and grants nothing else.
+  the folder. Colliding names get `-2`, `-3` and so on, claimed atomically so
+  two guests uploading `IMG_1234.jpg` at once cannot overwrite each other.
+- **Size is capped** per file and in total, and the total is reserved when an
+  upload starts, so parallel uploads cannot together overshoot the budget.
+- **Chunks are strictly sequential.** The server tells the client where to
+  resume from rather than trusting an offset, so a chunk cannot land in the
+  wrong place, and a client that sends more than it declared has its connection
+  dropped and its partial file deleted.
+- **Rate limited per client** on starting an upload and on logging in.
 
-What this does **not** do is inspect the bytes. The browser uploads straight to
-Microsoft, so the server never sees file contents — an executable renamed to
-`.jpg` would still land in the folder. Two things limit what that is worth to an
-attacker: nothing uploaded is ever served back by this site (the static handler
-serves a fixed allowlist and has no download route, so nothing can be executed
-*from* the site), and the app-folder scope keeps the damage inside one folder.
-Microsoft also scans OneDrive content for known malware on its side.
-
-If that gap ever matters, the fix is to relay the bytes through the server so it
-can check magic numbers and enforce a size cap before forwarding to Graph.
-
-### Turning it off
-
-Deleting the app registration in Entra revokes the refresh token immediately and
-stops all uploads. That is the clean off-switch once the photos are collected.
-
-Note that CapRover stores environment variables in plaintext on the server, so
-do not reuse this client secret anywhere else. The app-folder scope is what
-bounds the consequences if it ever leaks.
-
-## Deploying on CapRover
-
-The repo contains a `Dockerfile` based on `node:20-alpine` that listens on
-port 80.
-
-The container starts with `node server.js` from the Dockerfile's `CMD` — not
-`npm run serve`, which is a local convenience only (`package.json` is not even
-copied into the image). Configuration therefore comes entirely from the CapRover
-environment variables, never from `.env`, which `.dockerignore` keeps out of the
-image so the secret is not baked into a layer. `TOKEN_FILE` is left unset in
-CapRover so it falls back to its `/data/refresh_token` default on the volume.
-
-If a variable is missing, the container still serves the site and logs a warning
-naming what is absent; check the app logs in CapRover.
-
-Install the CapRover CLI if you haven't:
-
-```bash
-npm install -g caprover
-```
-
-Login and deploy:
-
-```bash
-caprover login -n <your-caprover-domain>
-```
-
-```bash
-caprover deploy -t . -a <app-name>
-```
-
-Alternatively, push to the CapRover git remote created during app setup.
+Uploads are resumable: files go up in 8 MiB chunks and a dropped chunk restarts
+from the offset the server reports, not from the beginning.
 
 ## Customization
 
 Edit `index.html`, `style.css`, and `script.js` as needed. The site is
 bilingual: every translatable element carries `data-fo` and `data-da`
 attributes, and `LanguageSwitcher` in `script.js` swaps them.
+
+`style.css` is built from Tailwind (`npm run build:css`) and is purged, so a
+new Tailwind utility class in `index.html` needs a rebuild. Hand-written rules
+live in `custom.css`, which is not purged.
 
 The original wedding info sections (programme, maps, dress code, contact, and
 the rest) are commented out in `index.html` rather than deleted — uncomment any

@@ -2,11 +2,10 @@
   "name": "wedding-project",
   "private": true,
   "version": "0.1.0",
-  "description": "Simple static wedding info site",
+  "description": "Wedding info site with guest photo upload",
   "scripts": {
     "dev": "start /B npm run watch:css && npm run serve",
     "serve": "node --env-file-if-exists=.env server.js",
-    "check": "node --env-file=.env check-onedrive.js",
     "preview": "docker build -t wedding-site . && docker run --rm -p 8080:80 wedding-site",
     "build:css": "tailwindcss -i ./src/tailwind.css -o ./style.css --minify",
     "watch:css": "tailwindcss -i ./src/tailwind.css -o ./style.css --watch"

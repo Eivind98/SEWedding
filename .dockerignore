@@ -4,7 +4,5 @@ README.md
 .gitignore
 *.log
 node_modules
-get-refresh-token.js
-check-onedrive.js
 .env
-.refresh_token
+.github
